@@ -268,9 +268,30 @@ function pwrDots(n,fase){
   return h+'</span>';
 }
 
-function rsiBar(rsi){
-  var col=rsi>70?'#ff4444':rsi>55?'#ffaa00':rsi<30?'#00aaff':'#00ff88';
-  return '<span class="rsi-wrap"><span class="rsi-bg"><span class="rsi-fill" style="width:'+rsi+'%;background:'+col+'"></span></span><span style="font-size:11px;color:#888">'+rsi+'</span></span>';
+function rsiBar(rsi) {
+  var col, label;
+
+  if (rsi < 30) {
+    col   = '#00aaff';
+    label = 'OVERSOLD';
+  } else if (rsi < 45) {
+    col   = '#00ff88';
+    label = 'PULIH';
+  } else if (rsi < 55) {
+    col   = '#aaaaaa';
+    label = 'NETRAL';
+  } else if (rsi < 70) {
+    col   = '#ffdd00';
+    label = 'BULLISH';
+  } else {
+    col   = '#ff4444';
+    label = 'OVERBOUGHT';
+  }
+
+  return '<span class="rsi-wrap">'
+    + '<span class="rsi-bg"><span class="rsi-fill" style="width:'+rsi+'%;background:'+col+'"></span></span>'
+    + '<span style="font-size:11px;color:'+col+';font-weight:500">'+rsi+'</span>'
+    + '</span>';
 }
 
 function fBadge(f){
@@ -350,9 +371,19 @@ function renderTable(){
     if(fType==='aksi'&&fVal!=='ALL'&&d.aksi!==fVal) return null;
     if(fType==='fase'&&d.fase!==fVal) return null;
 
-    var cc=d.chg>=0?'gp':'gn';
-    var mc=d.macd>d.macdSig?'#00ff88':'#ff4444';
-    var rc=d.rvol>1.5?'#00ff88':d.rvol>1.2?'#ffaa00':'#555';
+    // CHG% warna
+var cc = d.chg >= 0 ? 'gp' : 'gn';
+
+// MACD warna - berdasarkan positif/negatif
+var mc = d.macd >= 0 ? '#00ff88' : '#ff4444';
+
+// RVOL warna - sesuai panduan
+var rc;
+if      (d.rvol >= 2.0) rc = '#ff4444';
+else if (d.rvol >= 1.5) rc = '#00ff88';
+else if (d.rvol >= 1.0) rc = '#ffdd00';
+else if (d.rvol >= 0.6) rc = '#aaaaaa';
+else                    rc = '#444444';
     var selCls=sel===t?' sel':'';
 
     var row='<tr class="dr'+selCls+'" onclick="rowClick(\''+t+'\')">'

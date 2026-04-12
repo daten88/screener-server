@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Screener Saham IDX</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a0a; color: #fff; font-family: 'Segoe UI', sans-serif; }
+    .header { background: linear-gradient(135deg, #1a1a2e, #16213e); padding: 20px 30px; border-bottom: 2px solid #00ff88; display: flex; justify-content: space-between; align-items: center; }
+    .header h1 { font-size: 24px; color: #00ff88; }
+    .header .info { text-align: right; font-size: 13px; color: #aaa; }
+    .header .info span { color: #00ff88; font-weight: bold; }
+    .countdown-bar { background: #111; padding: 10px 30px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #222; }
+    .countdown-bar .label { font-size: 13px; color: #aaa; }
+    .countdown-bar .timer { font-size: 18px; font-weight: bold; color: #ffaa00; }
+    .progress-bar { width: 200px; height: 6px; background: #333; border-radius: 3px; overflow: hidden; }
+    .progress-fill { height: 100%; background: linear-gradient(90deg, #00ff88, #ffaa00); border-radius: 3px; transition: width 1s linear; }
+    .summary { display: flex; gap: 15px; padding: 20px 30px; flex-wrap: wrap; }
+    .summary-card { flex: 1; min-width: 120px; background: #1a1a1a; border-radius: 10px; padding: 15px; text-align: center; border: 1px solid #333; }
+    .summary-card .count { font-size: 32px; font-weight: bold; }
+    .summary-card .label { font-size: 12px; color: #aaa; margin-top: 5px; }
+    .card-haka { border-color: #00ff88; } .card-haka .count { color: #00ff88; }
+    .card-buy  { border-color: #00aaff; } .card-buy .count  { color: #00aaff; }
+    .card-hold { border-color: #ffaa00; } .card-hold .count { color: #ffaa00; }
+    .card-sell { border-color: #ff4444; } .card-sell .count { color: #ff4444; }
+    .card-total { border-color: #888; }  .card-total .count { color: #fff; }
+    .filters { padding: 0 30px 15px; display: flex; gap: 10px; flex-wrap: wrap; }
+    .filter-btn { padding: 8px 20px; border-radius: 20px; border: none; cursor: pointer; font-size: 13px; font-weight: bold; transition: all 0.2s; }
+    .filter-btn.active { opacity: 1; transform: scale(1.05); }
+    .filter-btn:not(.active) { opacity: 0.5; }
+    .btn-all  { background: #333; color: #fff; }
+    .btn-haka { background: #00ff88; color: #000; }
+    .btn-buy  { background: #00aaff; color: #000; }
+    .btn-hold { background: #ffaa00; color: #000; }
+    .btn-sell { background: #ff4444; color: #fff; }
+    .table-container { padding: 0 30px 30px; overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    thead tr { background: #1a1a2e; color: #00ff88; text-transform: uppercase; font-size: 12px; }
+    thead th { padding: 12px 15px; text-align: left; border-bottom: 2px solid #00ff88; }
+    tbody tr { border-bottom: 1px solid #1a1a1a; transition: background 0.2s; }
+    tbody tr:hover { background: #1a1a1a; }
+    tbody td { padding: 12px 15px; }
+    .ticker { font-weight: bold; font-size: 16px; color: #fff; }
+    .price { font-weight: bold; color: #ffaa00; }
+    .badge { padding: 5px 12px; border-radius: 20px; font-weight: bold; font-size: 13px; display: inline-block; }
+    .badge-haka { background: #00ff88; color: #000; }
+    .badge-buy  { background: #00aaff; color: #000; }
+    .badge-hold { background: #ffaa00; color: #000; }
+    .badge-sell { background: #ff4444; color: #fff; }
+    .loading { text-align: center; padding: 60px; color: #aaa; font-size: 18px; }
+    .spinner { width: 40px; height: 40px; border: 4px solid #333; border-top: 4px solid #00ff88; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 20px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .last-update { text-align: center; padding: 10px; color: #555; font-size: 12px; }
+    .scanning-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 999; justify-content: center; align-items: center; flex-direction: column; gap: 20px; }
+    .scanning-overlay.show { display: flex; }
+    .scanning-text { color: #00ff88; font-size: 20px; font-weight: bold; }
+    .scan-btn { padding: 10px 25px; background: #00ff88; color: #000; border: none; border-radius: 20px; font-weight: bold; cursor: pointer; font-size: 14px; }
+    .scan-btn:hover { background: #00cc66; }
+  </style>
+</head>
+<body>
+
+<div class="scanning-overlay" id="overlay">
+  <div class="spinner"></div>
+  <div class="scanning-text">Sedang Scanning 30 Saham...</div>
+</div>
+
+<div class="header">
+  <div>
+    <h1>SCREENER SAHAM IDX</h1>
+    <div style="font-size:12px; color:#aaa; margin-top:5px;">Watchlist 30 Saham | Timeframe 1D</div>
+  </div>
+  <div class="info">
+    <div>Auto refresh: <span>30 detik</span></div>
+    <div>Last scan: <span id="lastScan">-</span></div>
+    <div style="margin-top:8px;">
+      <button class="scan-btn" onclick="scanNow()">Scan Sekarang</button>
+    </div>
+  </div>
+</div>
+
+<div class="countdown-bar">
+  <div class="label">Refresh berikutnya:</div>
+  <div class="timer" id="countdown">30</div>
+  <div class="progress-bar">
+    <div class="progress-fill" id="progressFill" style="width:100%"></div>
+  </div>
+</div>
+
+<div class="summary">
+  <div class="summary-card card-haka">
+    <div class="count" id="countHaka">0</div>
+    <div class="label">HAKA</div>
+  </div>
+  <div class="summary-card card-buy">
+    <div class="count" id="countBuy">0</div>
+    <div class="label">BUY</div>
+  </div>
+  <div class="summary-card card-hold">
+    <div class="count" id="countHold">0</div>
+    <div class="label">HOLD</div>
+  </div>
+  <div class="summary-card card-sell">
+    <div class="count" id="countSell">0</div>
+    <div class="label">SELL</div>
+  </div>
+  <div class="summary-card card-total">
+    <div class="count" id="countTotal">0</div>
+    <div class="label">TOTAL</div>
+  </div>
+</div>
+
+<div class="filters">
+  <button class="filter-btn btn-all active" onclick="filterData('ALL', event)">Semua</button>
+  <button class="filter-btn btn-haka"       onclick="filterData('HAKA', event)">HAKA</button>
+  <button class="filter-btn btn-buy"        onclick="filterData('BUY', event)">BUY</button>
+  <button class="filter-btn btn-hold"       onclick="filterData('HOLD', event)">HOLD</button>
+  <button class="filter-btn btn-sell"       onclick="filterData('SELL', event)">SELL</button>
+</div>
+
+<div class="table-container">
+  <div class="loading" id="loading">
+    <div class="spinner"></div>
+    <div>Memuat data...</div>
+  </div>
+  <table id="mainTable" style="display:none">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Ticker</th>
+        <th>Harga</th>
+        <th>RSI</th>
+        <th>MACD</th>
+        <th>RVOL</th>
+        <th>BDR</th>
+        <th>Sinyal</th>
+      </tr>
+    </thead>
+    <tbody id="tableBody"></tbody>
+  </table>
+</div>
+
+<div class="last-update" id="lastUpdate"></div>
+
+<script>
+  let allData = [];
+  let currentFilter = 'ALL';
+  let countdown = 30;
+  let totalSeconds = 30;
+
+  function getBadgeClass(signal) {
+    if (signal.includes('HAKA')) return 'badge-haka';
+    if (signal.includes('BUY'))  return 'badge-buy';
+    if (signal.includes('HOLD')) return 'badge-hold';
+    if (signal.includes('SELL')) return 'badge-sell';
+    return 'badge-hold';
+  }
+
+  function getRSIStyle(rsi) {
+    if (rsi < 30) return 'color:#00ff88; font-weight:bold';
+    if (rsi < 45) return 'color:#88ff00';
+    if (rsi < 55) return 'color:#aaaaaa';
+    if (rsi < 70) return 'color:#00aaff';
+    return 'color:#ff4444; font-weight:bold';
+  }
+
+  function getRVOLStyle(rvol) {
+    if (rvol >= 2.0) return 'color:#ff4444; font-weight:bold';
+    if (rvol >= 1.5) return 'color:#ffaa00; font-weight:bold';
+    if (rvol >= 1.0) return 'color:#ffdd00';
+    if (rvol >= 0.6) return 'color:#aaaaaa';
+    return 'color:#555555';
+  }
+
+  function renderTable() {
+    const filtered = currentFilter === 'ALL'
+      ? allData
+      : allData.filter(r => r.signal.includes(currentFilter));
+
+    const tbody = document.getElementById('tableBody');
+    tbody.innerHTML = '';
+
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('mainTable').style.display = 'table';
+
+    if (filtered.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="8" style="text-align:center; padding:40px; color:#555;">
+            Tidak ada saham dengan sinyal ${currentFilter}
+          </td>
+        </tr>`;
+      return;
+    }
+
+    filtered.forEach((r, i) => {
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td style="color:#555">${i + 1}</td>
+        <td class="ticker">${r.ticker}</td>
+        <td class="price">Rp${Number(r.price).toLocaleString('id-ID')}</td>
+        <td style="${getRSIStyle(r.rsi)}">${r.rsi}<br><small style="color:#555">${r.rsiLabel}</small></td>
+        <td style="color:${r.macd >= 0 ? '#00ff88' : '#ff4444'}">${r.macd}<br><small style="color:#555">${r.macdLabel}</small></td>
+        <td style="${getRVOLStyle(r.rvol)}">${r.rvol}x<br><small style="color:#555">${r.rvolLabel}</small></td>
+        <td style="color:#aaa">${r.bdr}</td>
+        <td><span class="badge ${getBadgeClass(r.signal)}">${r.signal}</span></td>
+      `;
+      tbody.appendChild(row);
+    });
+  }
+
+  function updateSummary() {
+    const haka = allData.filter(r => r.signal.includes('HAKA')).length;
+    const buy  = allData.filter(r => r.signal.includes('BUY')).length;
+    const hold = allData.filter(r => r.signal.includes('HOLD')).length;
+    const sell = allData.filter(r => r.signal.includes('SELL')).length;
+    document.getElementById('countHaka').textContent  = haka;
+    document.getElementById('countBuy').textContent   = buy;
+    document.getElementById('countHold').textContent  = hold;
+    document.getElementById('countSell').textContent  = sell;
+    document.getElementById('countTotal').textContent = allData.length;
+  }
+
+  function filterData(filter, e) {
+    currentFilter = filter;
+    document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+    e.target.classList.add('active');
+    renderTable();
+  }
+
+  async function fetchData() {
+    try {
+      const res  = await fetch('/hasil');
+      const json = await res.json();
+      if (json.data && json.data.length > 0) {
+        allData = json.data;
+        document.getElementById('lastScan').textContent = json.lastScan ?? '-';
+        renderTable();
+        updateSummary();
+      }
+    } catch (err) {
+      console.error('Error fetch:', err);
+    }
+  }
+
+  async function scanNow() {
+    document.getElementById('overlay').classList.add('show');
+    try {
+      const res  = await fetch('/screener');
+      const json = await res.json();
+      if (json && json.length > 0) {
+        allData = json;
+        renderTable();
+        updateSummary();
+        document.getElementById('lastScan').textContent =
+          new Date().toLocaleString('id-ID');
+      }
+    } catch (err) {
+      console.error('Error scan:', err);
+    }
+    document.getElementById('overlay').classList.remove('show');
+  }
+
+  function startCountdown() {
+    countdown = totalSeconds;
+    const interval = setInterval(() => {
+      countdown--;
+      document.getElementById('countdown').textContent = countdown;
+      const pct = (countdown / totalSeconds) * 100;
+      document.getElementById('progressFill').style.width = pct + '%';
+
+      if (countdown <= 0) {
+        clearInterval(interval);
+        fetchData();
+        startCountdown();
+      }
+    }, 1000);
+  }
+
+  window.onload = async function() {
+    await fetchData();
+    startCountdown();
+  };
+</script>
+
+</body>
+</html>
+  

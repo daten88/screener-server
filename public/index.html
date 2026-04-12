@@ -97,7 +97,6 @@ tr.sel td{background:#0a1a2a}
 </head>
 <body>
 <div class="wrap">
-
 <div class="topbar">
   <div style="display:flex;flex-direction:column;gap:4px">
     <span class="tbar-title">
@@ -110,23 +109,19 @@ tr.sel td{background:#0a1a2a}
   <span class="conn-badge loading" id="connBadge">Connecting...</span>
   <span class="tbar-right" id="lastUpdate">&mdash;</span>
 </div>
-
 <div class="prog"><div class="prog-fill" id="progFill" style="width:0%"></div></div>
-
 <div class="sum-grid">
   <div class="sc"><div class="sk">HAKA</div><div class="sv" id="cH" style="color:#00ff88">0</div></div>
   <div class="sc"><div class="sk">BUY</div><div class="sv" id="cB" style="color:#00aaff">0</div></div>
   <div class="sc"><div class="sk">HOLD</div><div class="sv" id="cHo" style="color:#ffaa00">0</div></div>
   <div class="sc"><div class="sk">SELL</div><div class="sv" id="cS" style="color:#ff4444">0</div></div>
 </div>
-
 <div class="mood-bar">
   <span class="mood-lbl">Mood Pasar</span>
   <span class="mood-val" id="moodVal">&mdash;</span>
   <span class="mood-sep">|</span>
   <span class="mood-stat" id="moodStat">Menunggu data...</span>
 </div>
-
 <div class="filter-row">
   <span class="filter-label">SINYAL</span>
   <button class="fb fb-all on" onclick="setFilter('aksi','ALL',this)">Semua</button>
@@ -140,14 +135,12 @@ tr.sel td{background:#0a1a2a}
   <button class="fb fb-rb" onclick="setFilter('fase','REBOUND',this)">Rebound</button>
   <button class="fb fb-bd" onclick="setFilter('fase','BREAKDOWN',this)">Breakdown</button>
 </div>
-
 <div class="add-bar">
   <input id="addInp" type="text" placeholder="Tambah emiten..." maxlength="10"/>
   <button class="btn" onclick="addStock()">+ Tambah</button>
   <button class="btn" onclick="manualRefresh()">&#x21BB; Refresh</button>
   <span class="cd" id="cdTxt"></span>
 </div>
-
 <div class="tbl-outer">
 <table>
   <thead><tr>
@@ -175,7 +168,6 @@ tr.sel td{background:#0a1a2a}
   </tbody>
 </table>
 </div>
-
 <div id="chartPanel" style="display:none" class="chart-panel">
   <div class="chart-hdr">
     <div class="chart-meta">
@@ -190,13 +182,11 @@ tr.sel td{background:#0a1a2a}
   </div>
   <div class="tv-wrap" id="tvWrap"></div>
 </div>
-
 <div class="note">
   Data update otomatis tiap 2 menit jam bursa. Klik baris untuk chart TradingView.<br>
   <strong>Bukan rekomendasi investasi. Selalu lakukan analisa mandiri.</strong>
 </div>
 </div>
-
 <script>
 var cache={}, sel=null, fType='aksi', fVal='ALL', sKey='aksi', sAsc=true;
 var cdInt=null, cdN=30;

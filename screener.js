@@ -6,7 +6,8 @@ const {
   calculateATR,  calculateCHG,
   calculateWick, calculateBDR,
   calculatePWR,  calculateFASE,
-  calculateAKSI, calculateTPSL
+  calculateAKSI, calculateTPSL,
+  calculateEntry
 } = require('./indicators');
 
 const WATCHLIST = [
@@ -67,13 +68,14 @@ async function screenStock(ticker) {
   const pwr              = calculatePWR(rsi, macd, macdSig, rvol, chg, hist);
   const fase             = calculateFASE(rsi, macd, macdSig, chg, wick, hist);
   const aksi             = calculateAKSI(rsi, macd, macdSig, rvol, chg, pwr, fase);
-  const { tp, sl }       = calculateTPSL(price, atr, fase, aksi, highs, lows);
+  const { tp, sl }     = calculateTPSL(price, atr, fase, aksi, highs, lows);
+  const { e1, e2, e3 } = calculateEntry(price, atr, fase, aksi, highs, lows);
 
   const rsiSig  = getRSISignal(rsi);
   const macdSigLabel = getMACDSignal(macd, macdSig);
   const rvolSig = getRVOLSignal(rvol);
 
-  return {
+return {
     ticker,
     ok:        true,
     price:     Math.round(price),
@@ -91,7 +93,10 @@ async function screenStock(ticker) {
     fase,
     aksi,
     tp,
-    sl
+    sl,
+    e1,
+    e2,
+    e3
   };
 }
 

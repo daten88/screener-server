@@ -160,11 +160,13 @@ tr.sel td{background:#0a1a2a}
     <th onclick="sortBy('bdr')">BDR</th>
     <th onclick="sortBy('pwr')">PWR</th>
     <th onclick="sortBy('fase')">FASE</th>
-    <th onclick="sortBy('tp')">TP</th>
-    <th onclick="sortBy('sl')">SL</th>
-    <th onclick=" 
-sortBy('aksi')">SINYAL</th>
-    <th></th>
+    <th onclick="sortBy('e1')">ENTRY 1</th>
+<th onclick="sortBy('e2')">ENTRY 2</th>
+<th onclick="sortBy('e3')">ENTRY 3</th>
+<th onclick="sortBy('tp')">TP</th>
+<th onclick="sortBy('sl')">SL</th>
+<th onclick="sortBy('aksi')">SINYAL</th>
+<th></th>
   </tr></thead>
   <tbody id="tBody">
     <tr><td colspan="13" style="text-align:center;padding:30px;color:#555">
@@ -365,8 +367,11 @@ function renderTable(){
       +'<td>'+bBadge(d.bdr)+'</td>'
       +'<td>'+pwrDots(d.pwr,d.fase)+'</td>'
       +'<td>'+fBadge(d.fase)+'</td>'
-      +'<td><span class="tp-v">'+(d.tp?d.tp.toLocaleString('id-ID'):'&mdash;')+'</span></td>'
-      +'<td><span class="sl-v">'+(d.sl?d.sl.toLocaleString('id-ID'):'&mdash;')+'</span></td>'
+      +'<td><span style="color:#aaffcc;font-size:11px;font-weight:500">'+(d.e1?d.e1.toLocaleString('id-ID'):'&mdash;')+'</span></td>'
++'<td><span style="color:#88ffaa;font-size:11px;font-weight:500">'+(d.e2?d.e2.toLocaleString('id-ID'):'&mdash;')+'</span></td>'
++'<td><span style="color:#55ff88;font-size:11px;font-weight:500">'+(d.e3?d.e3.toLocaleString('id-ID'):'&mdash;')+'</span></td>'
++'<td><span class="tp-v">'+(d.tp?d.tp.toLocaleString('id-ID'):'&mdash;')+'</span></td>'
++'<td><span class="sl-v">'+(d.sl?d.sl.toLocaleString('id-ID'):'&mdash;')+'</span></td>'
       +'<td>'+aBadge(d.aksi)+'</td>'
       +'<td><button class="del" onclick="event.stopPropagation();delRow(\''+t+'\')">x</button></td>'
       +'</tr>';
@@ -407,6 +412,9 @@ function showChart(t){
   document.getElementById('cBdr').innerHTML=d&&d.ok?bBadge(d.bdr):'';
   if(d&&d.ok){
     document.getElementById('cTpSl').innerHTML=
+      '<span style="color:#aaffcc;font-weight:500">E1 '+(d.e1?d.e1.toLocaleString('id-ID'):'&mdash;')+'</span> &nbsp; '+
+      '<span style="color:#88ffaa;font-weight:500">E2 '+(d.e2?d.e2.toLocaleString('id-ID'):'&mdash;')+'</span> &nbsp; '+
+      '<span style="color:#55ff88;font-weight:500">E3 '+(d.e3?d.e3.toLocaleString('id-ID'):'&mdash;')+'</span> &nbsp; '+
       '<span class="tp-v">TP '+(d.tp||0).toLocaleString('id-ID')+'</span> &nbsp; '+
       '<span class="sl-v">SL '+(d.sl||0).toLocaleString('id-ID')+'</span>';
   }

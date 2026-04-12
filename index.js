@@ -3,6 +3,7 @@ const cron    = require('node-cron');
 const { runScreener, screenStock, WATCHLIST } = require('./screener');
 
 const app  = express();
+app.use(express.static('public'));
 const PORT = process.env.PORT || 3000;
 
 let lastResults  = [];

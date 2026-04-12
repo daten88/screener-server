@@ -1,12 +1,14 @@
 const axios = require('axios');
 const {
-  calculateRSI, getRSISignal,
+  calculateRSI,  getRSISignal,
   calculateMACD, getMACDSignal,
   calculateRVOL, getRVOLSignal,
-  calculateBDR, getFinalSignal
+  calculateATR,  calculateCHG,
+  calculateWick, calculateBDR,
+  calculatePWR,  calculateFASE,
+  calculateAKSI, calculateTPSL
 } = require('./indicators');
 
-// ===== WATCHLIST =====
 const WATCHLIST = [
   'AHAP', 'ARCI', 'BIPI', 'BNBR', 'BRMS',
   'BULL', 'BUMI', 'BUVA', 'CUAN', 'DATA',
@@ -16,105 +18,96 @@ const WATCHLIST = [
   'TPIA', 'TRUE', 'VKTR', 'WIFI', 'ZATA'
 ];
 
-// ===== FETCH DATA =====
 async function fetchData(ticker) {
   try {
     const symbol = `${ticker}.JK`;
-    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=3mo`;
-    const res = await axios.get(url, {
-      headers: { 'User-Agent': 'Mozilla/5.0' },
+    const url    = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=3mo`;
+    const res    = await axios.get(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Accept': 'application/json',
+        'Referer': 'https://finance.yahoo.com'
+      },
       timeout: 10000
     });
 
-    const chart = res.data.chart.result[0];
-    const quote = chart.indicators.quote[0];
-    const closes  = quote.close.filter(v => v !== null);
-    const volumes = quote.volume.filter(v => v !== null);
+    const chart  = res.data.chart.result[0];
+    const meta   = chart.meta;
+    const quote  = chart.indicators.quote[0];
+    const closes  = quote.close.filter(v  => v != null);
+    const highs   = quote.high.filter(v   => v != null);
+    const lows    = quote.low.filter(v    => v != null);
+    const volumes = quote.volume.filter(v => v != null);
 
-    if (closes.length < 30) return null;
+    if (closes.length < 30) return { ticker, ok: false, error: 'Data kurang' };
 
-    return {
-      closes,
-      volumes,
-      currentPrice: closes[closes.length - 1]
-    };
+    const price     = meta.regularMarketPrice || closes[closes.length - 1];
+    const prevClose = meta.previousClose      || closes[closes.length - 2];
+
+    return { closes, highs, lows, volumes, price, prevClose };
   } catch (err) {
-    console.log(`❌ Gagal fetch ${ticker}: ${err.message}`);
     return null;
   }
 }
 
-// ===== SCREEN 1 SAHAM =====
 async function screenStock(ticker) {
   const data = await fetchData(ticker);
-  if (!data) return null;
+  if (!data || data.ok === false) return { ticker, ok: false, error: data?.error || 'Gagal fetch' };
 
-  const { closes, volumes, currentPrice } = data;
+  const { closes, highs, lows, volumes, price, prevClose } = data;
 
-  const rsi            = calculateRSI(closes);
-  const { macd, prev } = calculateMACD(closes);
-  const rvol           = calculateRVOL(volumes);
-  const bdr            = calculateBDR(closes, rvol);
+  // Hitung semua indikator
+  const rsi              = calculateRSI(closes);
+  const { macd, signal: macdSig, hist } = calculateMACD(closes);
+  const rvol             = calculateRVOL(volumes);
+  const atr              = calculateATR(highs, lows, closes);
+  const chg              = calculateCHG(price, prevClose);
+  const wick             = calculateWick(highs, lows, closes);
+  const bdr              = calculateBDR(volumes, closes, rvol);
+  const pwr              = calculatePWR(rsi, macd, macdSig, rvol, chg, hist);
+  const fase             = calculateFASE(rsi, macd, macdSig, chg, wick, hist);
+  const aksi             = calculateAKSI(rsi, macd, macdSig, rvol, chg, pwr, fase);
+  const { tp, sl }       = calculateTPSL(price, atr, fase, aksi, highs, lows);
 
   const rsiSig  = getRSISignal(rsi);
-  const macdSig = getMACDSignal(macd, prev);
+  const macdSigLabel = getMACDSignal(macd, macdSig);
   const rvolSig = getRVOLSignal(rvol);
-
-  const signal = getFinalSignal(
-    rsiSig.score, macdSig.score,
-    rvolSig.score, bdr.score,
-    macd
-  );
 
   return {
     ticker,
-    price:     Math.round(currentPrice),
+    ok:        true,
+    price:     Math.round(price),
+    chg,
     rsi,
     rsiLabel:  rsiSig.label,
     macd,
-    macdLabel: macdSig.label,
+    macdSig,
+    hist,
+    macdLabel: macdSigLabel.label,
     rvol,
     rvolLabel: rvolSig.label,
     bdr:       bdr.label,
-    signal
+    pwr,
+    fase,
+    aksi,
+    tp,
+    sl
   };
 }
 
-// ===== SCREEN SEMUA =====
 async function runScreener() {
   const now = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
   console.log('\n' + '='.repeat(50));
-  console.log('📊 SCREENER SAHAM IDX');
-  console.log(`🕐 ${now} WIB`);
-  console.log(`📋 Total Watchlist: ${WATCHLIST.length} saham`);
-  console.log('='.repeat(50) + '\n');
-
-  const results = [];
-
-  for (const ticker of WATCHLIST) {
-    process.stdout.write(`🔍 Scanning ${ticker}...\r`);
-    const result = await screenStock(ticker);
-    if (result) results.push(result);
-  }
-
-  const order = { '🚀 HAKA': 0, '✅ BUY': 1, '🟡 HOLD': 2, '🔴 SELL': 3 };
-  results.sort((a, b) => (order[a.signal] ?? 9) - (order[b.signal] ?? 9));
-
-  console.log('\n' + '='.repeat(50));
-  console.log('📊 HASIL SCREENER');
+  console.log('SCREENER SAHAM IDX - ' + now);
   console.log('='.repeat(50));
 
-  for (const r of results) {
-    console.log(`\n${'━'.repeat(35)}`);
-    console.log(`📌 ${r.ticker} | Harga: Rp${r.price.toLocaleString('id-ID')}`);
-    console.log(`   RSI  : ${r.rsi} → ${r.rsiLabel}`);
-    console.log(`   MACD : ${r.macd} → ${r.macdLabel}`);
-    console.log(`   RVOL : ${r.rvol}x → ${r.rvolLabel}`);
-    console.log(`   BDR  : ${r.bdr}`);
-    console.log(`   ⚡ SINYAL: ${r.signal}`);
+  const results = {};
+  for (const ticker of WATCHLIST) {
+    process.stdout.write(`Scanning ${ticker}...\r`);
+    results[ticker] = await screenStock(ticker);
   }
 
-  console.log('\n' + '='.repeat(50) + '\n');
+  console.log('\nScan selesai - ' + Object.keys(results).length + ' saham');
   return results;
 }
 

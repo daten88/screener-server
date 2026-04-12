@@ -1,289 +1,445 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Screener Saham IDX</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { background: #0a0a0a; color: #fff; font-family: 'Segoe UI', sans-serif; }
-    .header { background: linear-gradient(135deg, #1a1a2e, #16213e); padding: 20px 30px; border-bottom: 2px solid #00ff88; display: flex; justify-content: space-between; align-items: center; }
-    .header h1 { font-size: 24px; color: #00ff88; }
-    .header .info { text-align: right; font-size: 13px; color: #aaa; }
-    .header .info span { color: #00ff88; font-weight: bold; }
-    .countdown-bar { background: #111; padding: 10px 30px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #222; }
-    .countdown-bar .label { font-size: 13px; color: #aaa; }
-    .countdown-bar .timer { font-size: 18px; font-weight: bold; color: #ffaa00; }
-    .progress-bar { width: 200px; height: 6px; background: #333; border-radius: 3px; overflow: hidden; }
-    .progress-fill { height: 100%; background: linear-gradient(90deg, #00ff88, #ffaa00); border-radius: 3px; transition: width 1s linear; }
-    .summary { display: flex; gap: 15px; padding: 20px 30px; flex-wrap: wrap; }
-    .summary-card { flex: 1; min-width: 120px; background: #1a1a1a; border-radius: 10px; padding: 15px; text-align: center; border: 1px solid #333; }
-    .summary-card .count { font-size: 32px; font-weight: bold; }
-    .summary-card .label { font-size: 12px; color: #aaa; margin-top: 5px; }
-    .card-haka { border-color: #00ff88; } .card-haka .count { color: #00ff88; }
-    .card-buy  { border-color: #00aaff; } .card-buy .count  { color: #00aaff; }
-    .card-hold { border-color: #ffaa00; } .card-hold .count { color: #ffaa00; }
-    .card-sell { border-color: #ff4444; } .card-sell .count { color: #ff4444; }
-    .card-total { border-color: #888; }  .card-total .count { color: #fff; }
-    .filters { padding: 0 30px 15px; display: flex; gap: 10px; flex-wrap: wrap; }
-    .filter-btn { padding: 8px 20px; border-radius: 20px; border: none; cursor: pointer; font-size: 13px; font-weight: bold; transition: all 0.2s; }
-    .filter-btn.active { opacity: 1; transform: scale(1.05); }
-    .filter-btn:not(.active) { opacity: 0.5; }
-    .btn-all  { background: #333; color: #fff; }
-    .btn-haka { background: #00ff88; color: #000; }
-    .btn-buy  { background: #00aaff; color: #000; }
-    .btn-hold { background: #ffaa00; color: #000; }
-    .btn-sell { background: #ff4444; color: #fff; }
-    .table-container { padding: 0 30px 30px; overflow-x: auto; }
-    table { width: 100%; border-collapse: collapse; font-size: 14px; }
-    thead tr { background: #1a1a2e; color: #00ff88; text-transform: uppercase; font-size: 12px; }
-    thead th { padding: 12px 15px; text-align: left; border-bottom: 2px solid #00ff88; }
-    tbody tr { border-bottom: 1px solid #1a1a1a; transition: background 0.2s; }
-    tbody tr:hover { background: #1a1a1a; }
-    tbody td { padding: 12px 15px; }
-    .ticker { font-weight: bold; font-size: 16px; color: #fff; }
-    .price { font-weight: bold; color: #ffaa00; }
-    .badge { padding: 5px 12px; border-radius: 20px; font-weight: bold; font-size: 13px; display: inline-block; }
-    .badge-haka { background: #00ff88; color: #000; }
-    .badge-buy  { background: #00aaff; color: #000; }
-    .badge-hold { background: #ffaa00; color: #000; }
-    .badge-sell { background: #ff4444; color: #fff; }
-    .loading { text-align: center; padding: 60px; color: #aaa; font-size: 18px; }
-    .spinner { width: 40px; height: 40px; border: 4px solid #333; border-top: 4px solid #00ff88; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 20px; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .last-update { text-align: center; padding: 10px; color: #555; font-size: 12px; }
-    .scanning-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 999; justify-content: center; align-items: center; flex-direction: column; gap: 20px; }
-    .scanning-overlay.show { display: flex; }
-    .scanning-text { color: #00ff88; font-size: 20px; font-weight: bold; }
-    .scan-btn { padding: 10px 25px; background: #00ff88; color: #000; border: none; border-radius: 20px; font-weight: bold; cursor: pointer; font-size: 14px; }
-    .scan-btn:hover { background: #00cc66; }
-  </style>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Screener Saham IDX</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:13px;background:#0a0a0a;color:#fff;padding:16px}
+.wrap{max-width:1300px;margin:0 auto}
+.topbar{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.live-dot{width:8px;height:8px;border-radius:50%;background:#555;display:inline-block;margin-right:4px}
+.live-dot.on{background:#00ff88;animation:blink 1.4s infinite}
+.live-dot.err{background:#ff4444}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.tbar-title{font-size:14px;font-weight:600;color:#00ff88}
+.conn-badge{font-size:11px;padding:3px 9px;border-radius:10px;background:#222;color:#888}
+.conn-badge.ok{background:#0a2a1a;color:#00ff88}
+.conn-badge.err{background:#2a0a0a;color:#ff4444}
+.conn-badge.loading{background:#2a2000;color:#ffaa00}
+.tbar-right{margin-left:auto;font-size:11px;color:#555}
+.prog{height:3px;background:#222;border-radius:2px;margin-bottom:10px;overflow:hidden}
+.prog-fill{height:100%;background:#00ff88;border-radius:2px;transition:width .3s}
+.sum-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:10px}
+.sc{background:#111;border-radius:10px;padding:12px;text-align:center;border:1px solid #222}
+.sc .sk{font-size:10px;color:#555;margin-bottom:4px}
+.sc .sv{font-size:24px;font-weight:600}
+.mood-bar{display:flex;align-items:center;gap:10px;background:#111;border-radius:10px;padding:10px 14px;margin-bottom:10px;flex-wrap:wrap;border:1px solid #222}
+.mood-lbl{font-size:11px;color:#555}
+.mood-val{font-size:14px;font-weight:600}
+.mood-sep{color:#333}
+.mood-stat{font-size:11px;color:#555}
+.filter-row{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;align-items:center}
+.filter-label{font-size:10px;color:#555}
+.fb{font-size:11px;padding:5px 12px;border-radius:8px;border:1px solid #333;background:#111;color:#666;cursor:pointer}
+.fb:hover{background:#1a1a1a;color:#fff}
+.fb.on{font-weight:600;border-color:transparent}
+.fb-all.on{background:#333;color:#fff}
+.fb-haka.on{background:#0a2a1a;color:#00ff88;border-color:#00ff88}
+.fb-buy.on{background:#0a1a2a;color:#00aaff;border-color:#00aaff}
+.fb-hold.on{background:#2a1a00;color:#ffaa00;border-color:#ffaa00}
+.fb-sell.on{background:#2a0a0a;color:#ff4444;border-color:#ff4444}
+.fb-bo.on{background:#0a2a1a;color:#00ff88;border-color:#00ff88}
+.fb-rb.on{background:#0a1a2a;color:#00aaff;border-color:#00aaff}
+.fb-bd.on{background:#2a0a0a;color:#ff4444;border-color:#ff4444}
+.sep{color:#333;font-size:12px}
+.add-bar{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;align-items:center}
+.add-bar input{font-size:12px;padding:6px 10px;border:1px solid #333;border-radius:8px;background:#111;color:#fff;width:140px;text-transform:uppercase;outline:none}
+.add-bar input:focus{border-color:#00ff88}
+.btn{font-size:11px;padding:6px 14px;border-radius:8px;border:1px solid #333;background:#111;color:#888;cursor:pointer}
+.btn:hover{background:#1a1a1a;color:#fff}
+.cd{font-size:11px;color:#555;margin-left:auto}
+.tbl-outer{overflow-x:auto;margin-bottom:14px;background:#111;border-radius:10px;border:1px solid #222}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{font-size:10px;font-weight:500;color:#555;text-transform:uppercase;letter-spacing:.04em;padding:10px 8px;border-bottom:1px solid #222;text-align:left;white-space:nowrap;cursor:pointer;user-select:none}
+th:hover{color:#fff}
+td{padding:8px;border-bottom:1px solid #1a1a1a;white-space:nowrap}
+tr.dr{cursor:pointer}
+tr.dr:hover td{background:#1a1a1a}
+tr.sel td{background:#0a1a2a}
+.em{font-weight:600;font-size:13px;color:#fff}
+.gp{color:#00ff88;font-weight:500}
+.gn{color:#ff4444;font-weight:500}
+.badge{display:inline-block;font-size:9px;font-weight:600;padding:3px 8px;border-radius:8px}
+.b-haka{background:#0a2a1a;color:#00ff88;border:1px solid #00ff88}
+.b-buy{background:#0a1a2a;color:#00aaff;border:1px solid #00aaff}
+.b-hold{background:#2a1a00;color:#ffaa00;border:1px solid #ffaa00}
+.b-sell{background:#2a0a0a;color:#ff4444;border:1px solid #ff4444}
+.b-bo{background:#0a2a1a;color:#00ff88}
+.b-rb{background:#0a1a2a;color:#00aaff}
+.b-sw{background:#1a1a1a;color:#555}
+.b-bd{background:#2a0a0a;color:#ff4444}
+.b-ba{background:#2a1a00;color:#ffaa00}
+.pwr{display:inline-flex;gap:3px;align-items:center}
+.pd{width:7px;height:7px;border-radius:50%;background:#222}
+.pd.g{background:#00ff88}
+.pd.a{background:#ffaa00}
+.pd.r{background:#ff4444}
+.rsi-wrap{display:inline-flex;align-items:center;gap:5px}
+.rsi-bg{width:45px;height:4px;background:#222;border-radius:2px;overflow:hidden}
+.rsi-fill{height:100%;border-radius:2px}
+.tp-v{color:#00ff88;font-weight:500;font-size:11px}
+.sl-v{color:#ff4444;font-weight:500;font-size:11px}
+.del{font-size:10px;padding:2px 6px;border-radius:4px;border:1px solid #333;background:transparent;color:#555;cursor:pointer}
+.del:hover{background:#2a0a0a;color:#ff4444}
+.spin{display:inline-block;width:10px;height:10px;border:2px solid #333;border-top-color:#00ff88;border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.chart-panel{background:#111;border-radius:10px;border:1px solid #222;overflow:hidden;margin-bottom:12px}
+.chart-hdr{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid #222;flex-wrap:wrap;gap:6px}
+.chart-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.chart-ticker{font-size:14px;font-weight:600;color:#fff}
+.tv-wrap{width:100%;height:500px}
+.tv-wrap iframe{width:100%;height:100%;border:none}
+.note{font-size:10px;color:#333;margin-top:10px;line-height:1.8}
+.err-t{font-size:11px;color:#ff4444}
+</style>
 </head>
 <body>
+<div class="wrap">
 
-<div class="scanning-overlay" id="overlay">
-  <div class="spinner"></div>
-  <div class="scanning-text">Sedang Scanning 30 Saham...</div>
+<div class="topbar">
+  <span class="tbar-title"><span class="live-dot" id="liveDot"></span>Screener Saham IDX &mdash; Live</span>
+  <span class="conn-badge loading" id="connBadge">Connecting...</span>
+  <span class="tbar-right" id="lastUpdate">&mdash;</span>
 </div>
 
-<div class="header">
-  <div>
-    <h1>SCREENER SAHAM IDX</h1>
-    <div style="font-size:12px; color:#aaa; margin-top:5px;">Watchlist 30 Saham | Timeframe 1D</div>
-  </div>
-  <div class="info">
-    <div>Auto refresh: <span>30 detik</span></div>
-    <div>Last scan: <span id="lastScan">-</span></div>
-    <div style="margin-top:8px;">
-      <button class="scan-btn" onclick="scanNow()">Scan Sekarang</button>
+<div class="prog"><div class="prog-fill" id="progFill" style="width:0%"></div></div>
+
+<div class="sum-grid">
+  <div class="sc"><div class="sk">HAKA</div><div class="sv" id="cH" style="color:#00ff88">0</div></div>
+  <div class="sc"><div class="sk">BUY</div><div class="sv" id="cB" style="color:#00aaff">0</div></div>
+  <div class="sc"><div class="sk">HOLD</div><div class="sv" id="cHo" style="color:#ffaa00">0</div></div>
+  <div class="sc"><div class="sk">SELL</div><div class="sv" id="cS" style="color:#ff4444">0</div></div>
+</div>
+
+<div class="mood-bar">
+  <span class="mood-lbl">Mood Pasar</span>
+  <span class="mood-val" id="moodVal">&mdash;</span>
+  <span class="mood-sep">|</span>
+  <span class="mood-stat" id="moodStat">Menunggu data...</span>
+</div>
+
+<div class="filter-row">
+  <span class="filter-label">SINYAL</span>
+  <button class="fb fb-all on" onclick="setFilter('aksi','ALL',this)">Semua</button>
+  <button class="fb fb-haka"   onclick="setFilter('aksi','HAKA',this)">HAKA</button>
+  <button class="fb fb-buy"    onclick="setFilter('aksi','BUY',this)">BUY</button>
+  <button class="fb fb-hold"   onclick="setFilter('aksi','HOLD',this)">HOLD</button>
+  <button class="fb fb-sell"   onclick="setFilter('aksi','SELL',this)">SELL</button>
+  <span class="sep">|</span>
+  <span class="filter-label">FASE</span>
+  <button class="fb fb-bo" onclick="setFilter('fase','BREAKOUT',this)">Breakout</button>
+  <button class="fb fb-rb" onclick="setFilter('fase','REBOUND',this)">Rebound</button>
+  <button class="fb fb-bd" onclick="setFilter('fase','BREAKDOWN',this)">Breakdown</button>
+</div>
+
+<div class="add-bar">
+  <input id="addInp" type="text" placeholder="Tambah emiten..." maxlength="10"/>
+  <button class="btn" onclick="addStock()">+ Tambah</button>
+  <button class="btn" onclick="manualRefresh()">&#x21BB; Refresh</button>
+  <span class="cd" id="cdTxt"></span>
+</div>
+
+<div class="tbl-outer">
+<table>
+  <thead><tr>
+    <th onclick="sortBy('ticker')">Emiten</th>
+    <th onclick="sortBy('price')">Harga</th>
+    <th onclick="sortBy('chg')">CHG%</th>
+    <th onclick="sortBy('rsi')">RSI</th>
+    <th onclick="sortBy('macd')">MACD</th>
+    <th onclick="sortBy('rvol')">RVOL</th>
+    <th onclick="sortBy('bdr')">BDR</th>
+    <th onclick="sortBy('pwr')">PWR</th>
+    <th onclick="sortBy('fase')">FASE</th>
+    <th onclick="sortBy('tp')">TP</th>
+    <th onclick="sortBy('sl')">SL</th>
+    <th onclick=" 
+sortBy('aksi')">SINYAL</th>
+    <th></th>
+  </tr></thead>
+  <tbody id="tBody">
+    <tr><td colspan="13" style="text-align:center;padding:30px;color:#555">
+      <span class="spin"></span> Memuat data...
+    </td></tr>
+  </tbody>
+</table>
+</div>
+
+<div id="chartPanel" style="display:none" class="chart-panel">
+  <div class="chart-hdr">
+    <div class="chart-meta">
+      <span class="chart-ticker" id="cTicker"></span>
+      <span id="cFase"></span>
+      <span id="cAksi"></span>
+      <span id="cPwr"></span>
+      <span id="cBdr"></span>
+      <span id="cTpSl" style="font-size:11px"></span>
     </div>
+    <button class="btn" onclick="closeChart()">Tutup Chart</button>
   </div>
+  <div class="tv-wrap" id="tvWrap"></div>
 </div>
 
-<div class="countdown-bar">
-  <div class="label">Refresh berikutnya:</div>
-  <div class="timer" id="countdown">30</div>
-  <div class="progress-bar">
-    <div class="progress-fill" id="progressFill" style="width:100%"></div>
-  </div>
+<div class="note">
+  Data update otomatis tiap 2 menit jam bursa. Klik baris untuk chart TradingView.<br>
+  <strong>Bukan rekomendasi investasi. Selalu lakukan analisa mandiri.</strong>
 </div>
-
-<div class="summary">
-  <div class="summary-card card-haka">
-    <div class="count" id="countHaka">0</div>
-    <div class="label">HAKA</div>
-  </div>
-  <div class="summary-card card-buy">
-    <div class="count" id="countBuy">0</div>
-    <div class="label">BUY</div>
-  </div>
-  <div class="summary-card card-hold">
-    <div class="count" id="countHold">0</div>
-    <div class="label">HOLD</div>
-  </div>
-  <div class="summary-card card-sell">
-    <div class="count" id="countSell">0</div>
-    <div class="label">SELL</div>
-  </div>
-  <div class="summary-card card-total">
-    <div class="count" id="countTotal">0</div>
-    <div class="label">TOTAL</div>
-  </div>
 </div>
-
-<div class="filters">
-  <button class="filter-btn btn-all active" onclick="filterData('ALL', event)">Semua</button>
-  <button class="filter-btn btn-haka"       onclick="filterData('HAKA', event)">HAKA</button>
-  <button class="filter-btn btn-buy"        onclick="filterData('BUY', event)">BUY</button>
-  <button class="filter-btn btn-hold"       onclick="filterData('HOLD', event)">HOLD</button>
-  <button class="filter-btn btn-sell"       onclick="filterData('SELL', event)">SELL</button>
-</div>
-
-<div class="table-container">
-  <div class="loading" id="loading">
-    <div class="spinner"></div>
-    <div>Memuat data...</div>
-  </div>
-  <table id="mainTable" style="display:none">
-    <thead>
-      <tr>
-        <th>#</th>
-        <th>Ticker</th>
-        <th>Harga</th>
-        <th>RSI</th>
-        <th>MACD</th>
-        <th>RVOL</th>
-        <th>BDR</th>
-        <th>Sinyal</th>
-      </tr>
-    </thead>
-    <tbody id="tableBody"></tbody>
-  </table>
-</div>
-
-<div class="last-update" id="lastUpdate"></div>
 
 <script>
-  let allData = [];
-  let currentFilter = 'ALL';
-  let countdown = 30;
-  let totalSeconds = 30;
+var cache={}, sel=null, fType='aksi', fVal='ALL', sKey='aksi', sAsc=true;
+var cdInt=null, cdN=30;
+var AO={HAKA:0,BUY:1,HOLD:2,SELL:3};
+var FO={BREAKOUT:0,REBOUND:1,SIDEWAYS:2,BREAKDOWN:3};
 
-  function getBadgeClass(signal) {
-    if (signal.includes('HAKA')) return 'badge-haka';
-    if (signal.includes('BUY'))  return 'badge-buy';
-    if (signal.includes('HOLD')) return 'badge-hold';
-    if (signal.includes('SELL')) return 'badge-sell';
-    return 'badge-hold';
+function setStatus(s){
+  var dot=document.getElementById('liveDot');
+  var badge=document.getElementById('connBadge');
+  dot.className='live-dot';
+  badge.className='conn-badge';
+  if(s==='ok'){
+    dot.classList.add('on');
+    badge.textContent='Connected';
+    badge.classList.add('ok');
+  } else if(s==='loading'){
+    badge.textContent='Loading...';
+    badge.classList.add('loading');
+  } else {
+    dot.classList.add('err');
+    badge.textContent='Error';
+    badge.classList.add('err');
   }
+}
 
-  function getRSIStyle(rsi) {
-    if (rsi < 30) return 'color:#00ff88; font-weight:bold';
-    if (rsi < 45) return 'color:#88ff00';
-    if (rsi < 55) return 'color:#aaaaaa';
-    if (rsi < 70) return 'color:#00aaff';
-    return 'color:#ff4444; font-weight:bold';
-  }
-
-  function getRVOLStyle(rvol) {
-    if (rvol >= 2.0) return 'color:#ff4444; font-weight:bold';
-    if (rvol >= 1.5) return 'color:#ffaa00; font-weight:bold';
-    if (rvol >= 1.0) return 'color:#ffdd00';
-    if (rvol >= 0.6) return 'color:#aaaaaa';
-    return 'color:#555555';
-  }
-
-  function renderTable() {
-    const filtered = currentFilter === 'ALL'
-      ? allData
-      : allData.filter(r => r.signal.includes(currentFilter));
-
-    const tbody = document.getElementById('tableBody');
-    tbody.innerHTML = '';
-
-    document.getElementById('loading').style.display = 'none';
-    document.getElementById('mainTable').style.display = 'table';
-
-    if (filtered.length === 0) {
-      tbody.innerHTML = `
-        <tr>
-          <td colspan="8" style="text-align:center; padding:40px; color:#555;">
-            Tidak ada saham dengan sinyal ${currentFilter}
-          </td>
-        </tr>`;
+async function fetchData(){
+  try{
+    var r=await fetch('/data');
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    var j=await r.json();
+    var data=j.data||{};
+    if(Object.keys(data).length===0){
+      setTimeout(fetchData,3000);
       return;
     }
-
-    filtered.forEach((r, i) => {
-      const row = document.createElement('tr');
-      row.innerHTML = `
-        <td style="color:#555">${i + 1}</td>
-        <td class="ticker">${r.ticker}</td>
-        <td class="price">Rp${Number(r.price).toLocaleString('id-ID')}</td>
-        <td style="${getRSIStyle(r.rsi)}">${r.rsi}<br><small style="color:#555">${r.rsiLabel}</small></td>
-        <td style="color:${r.macd >= 0 ? '#00ff88' : '#ff4444'}">${r.macd}<br><small style="color:#555">${r.macdLabel}</small></td>
-        <td style="${getRVOLStyle(r.rvol)}">${r.rvol}x<br><small style="color:#555">${r.rvolLabel}</small></td>
-        <td style="color:#aaa">${r.bdr}</td>
-        <td><span class="badge ${getBadgeClass(r.signal)}">${r.signal}</span></td>
-      `;
-      tbody.appendChild(row);
-    });
-  }
-
-  function updateSummary() {
-    const haka = allData.filter(r => r.signal.includes('HAKA')).length;
-    const buy  = allData.filter(r => r.signal.includes('BUY')).length;
-    const hold = allData.filter(r => r.signal.includes('HOLD')).length;
-    const sell = allData.filter(r => r.signal.includes('SELL')).length;
-    document.getElementById('countHaka').textContent  = haka;
-    document.getElementById('countBuy').textContent   = buy;
-    document.getElementById('countHold').textContent  = hold;
-    document.getElementById('countSell').textContent  = sell;
-    document.getElementById('countTotal').textContent = allData.length;
-  }
-
-  function filterData(filter, e) {
-    currentFilter = filter;
-    document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
-    e.target.classList.add('active');
+    cache=data;
+    setStatus('ok');
+    document.getElementById('progFill').style.width='100%';
+    var now=new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    document.getElementById('lastUpdate').textContent='Update: '+now+(j.lastScan?' | Scan: '+j.lastScan:'');
     renderTable();
+    startCD();
+  } catch(e){
+    setStatus('error');
+    document.getElementById('lastUpdate').textContent='Error: '+e.message;
+    setTimeout(fetchData,5000);
   }
+}
 
-  async function fetchData() {
-    try {
-      const res  = await fetch('/hasil');
-      const json = await res.json();
-      if (json.data && json.data.length > 0) {
-        allData = json.data;
-        document.getElementById('lastScan').textContent = json.lastScan ?? '-';
-        renderTable();
-        updateSummary();
-      }
-    } catch (err) {
-      console.error('Error fetch:', err);
+function manualRefresh(){
+  if(cdInt) clearInterval(cdInt);
+  setStatus('loading');
+  fetchData();
+}
+
+function startCD(){
+  if(cdInt) clearInterval(cdInt);
+  cdN=30;
+  cdInt=setInterval(function(){
+    cdN--;
+    document.getElementById('cdTxt').textContent='Refresh dalam '+cdN+'d';
+    document.getElementById('progFill').style.width=(cdN/30*100)+'%';
+    if(cdN<=0){ clearInterval(cdInt); fetchData(); }
+  },1000);
+}
+
+function pwrDots(n,fase){
+  var cls=fase==='BREAKDOWN'?'r':fase==='SIDEWAYS'?'a':'g';
+  var h='<span class="pwr">';
+  for(var i=0;i<5;i++) h+='<span class="pd'+(i<n?' '+cls:'')+'"></span>';
+  return h+'</span>';
+}
+
+function rsiBar(rsi){
+  var col=rsi>70?'#ff4444':rsi>55?'#ffaa00':rsi<30?'#00aaff':'#00ff88';
+  return '<span class="rsi-wrap"><span class="rsi-bg"><span class="rsi-fill" style="width:'+rsi+'%;background:'+col+'"></span></span><span style="font-size:11px;color:#888">'+rsi+'</span></span>';
+}
+
+function fBadge(f){
+  var m={BREAKOUT:'b-bo',REBOUND:'b-rb',SIDEWAYS:'b-sw',BREAKDOWN:'b-bd'};
+  return '<span class="badge '+(m[f]||'b-sw')+'">'+f+'</span>';
+}
+
+function bBadge(b){
+  if(!b) return '<span style="color:#333;font-size:11px">&mdash;</span>';
+  var m={'BIG ACC':'b-bo','AKUM':'b-ba','DIST':'b-bd'};
+  return '<span class="badge '+(m[b]||'b-sw')+'">'+b+'</span>';
+}
+
+function aBadge(a){
+  var m={HAKA:'b-haka',BUY:'b-buy',HOLD:'b-hold',SELL:'b-sell'};
+  return '<span class="badge '+(m[a]||'b-sw')+'" style="padding:4px 10px;font-size:10px">'+a+'</span>';
+}
+
+function setFilter(type,val,btn){
+  fType=type; fVal=val;
+  document.querySelectorAll('.fb').forEach(function(b){ b.classList.remove('on'); });
+  btn.classList.add('on');
+  renderTable();
+}
+
+function sortBy(k){
+  if(sKey===k) sAsc=!sAsc;
+  else{ sKey=k; sAsc=true; }
+  renderTable();
+}
+
+function getSV(d){
+  if(!d||!d.ok) return sAsc?9999:-9999;
+  if(sKey==='aksi') return AO[d.aksi]!=null?AO[d.aksi]:2;
+  if(sKey==='fase') return FO[d.fase]!=null?FO[d.fase]:2;
+  if(sKey==='bdr'){
+    var bo={'BIG ACC':0,'AKUM':1,'':2,'DIST':3};
+    return bo[d.bdr]!=null?bo[d.bdr]:2;
+  }
+  if(sKey==='ticker') return d.ticker;
+  return d[sKey]!=null?d[sKey]:0;
+}
+
+function updateMood(){
+  var ld=Object.values(cache).filter(function(d){ return d&&d.ok; });
+  if(!ld.length) return;
+  var bo=ld.filter(function(d){ return d.fase==='BREAKOUT'; }).length;
+  var rb=ld.filter(function(d){ return d.fase==='REBOUND'; }).length;
+  var bd=ld.filter(function(d){ return d.fase==='BREAKDOWN'; }).length;
+  var sw=ld.filter(function(d){ return d.fase==='SIDEWAYS'; }).length;
+  var pct=Math.round((bo+rb)/ld.length*100);
+  var mood=pct>=60?'BULLISH':pct<=35?'BEARISH':'MIXED';
+  var col=pct>=60?'#00ff88':pct<=35?'#ff4444':'#ffaa00';
+  document.getElementById('moodVal').style.color=col;
+  document.getElementById('moodVal').textContent=mood;
+  document.getElementById('moodStat').textContent=bo+' Breakout · '+rb+' Rebound · '+bd+' Breakdown · '+sw+' Sideways';
+}
+
+function renderTable(){
+  var h=0,b=0,ho=0,s=0;
+  var tickers=Object.keys(cache);
+  if(!tickers.length) return;
+
+  Object.values(cache).filter(function(d){ return d&&d.ok; }).forEach(function(d){
+    if(d.aksi==='HAKA') h++;
+    else if(d.aksi==='BUY') b++;
+    else if(d.aksi==='HOLD') ho++;
+    else s++;
+  });
+
+  var rows=tickers.map(function(t){
+    var d=cache[t];
+    if(!d||!d.ok){
+      if(fVal!=='ALL') return null;
+      return{t:t,sv:9999,html:'<tr class="dr"><td class="em">'+t+'</td><td colspan="11" class="err-t">'+(d?d.error:'...')+'</td><td><button class="del" onclick="delRow(\''+t+'\')">x</button></td></tr>'};
     }
+    if(fType==='aksi'&&fVal!=='ALL'&&d.aksi!==fVal) return null;
+    if(fType==='fase'&&d.fase!==fVal) return null;
+
+    var cc=d.chg>=0?'gp':'gn';
+    var mc=d.macd>d.macdSig?'#00ff88':'#ff4444';
+    var rc=d.rvol>1.5?'#00ff88':d.rvol>1.2?'#ffaa00':'#555';
+    var selCls=sel===t?' sel':'';
+
+    var row='<tr class="dr'+selCls+'" onclick="rowClick(\''+t+'\')">'
+      +'<td class="em">'+t+'</td>'
+      +'<td style="color:#ffaa00;font-weight:500">'+d.price.toLocaleString('id-ID')+'</td>'
+      +'<td class="'+cc+'">'+(d.chg>=0?'+':'')+d.chg.toFixed(1)+'%</td>'
+      +'<td>'+rsiBar(d.rsi)+'</td>'
+      +'<td style="color:'+mc+';font-weight:500;font-size:11px">'+(d.macd>0?'+':'')+d.macd+'</td>'
+      +'<td style="font-size:11px;color:'+rc+'">'+d.rvol.toFixed(1)+'x</td>'
+      +'<td>'+bBadge(d.bdr)+'</td>'
+      +'<td>'+pwrDots(d.pwr,d.fase)+'</td>'
+      +'<td>'+fBadge(d.fase)+'</td>'
+      +'<td><span class="tp-v">'+(d.tp?d.tp.toLocaleString('id-ID'):'&mdash;')+'</span></td>'
+      +'<td><span class="sl-v">'+(d.sl?d.sl.toLocaleString('id-ID'):'&mdash;')+'</span></td>'
+      +'<td>'+aBadge(d.aksi)+'</td>'
+      +'<td><button class="del" onclick="event.stopPropagation();delRow(\''+t+'\')">x</button></td>'
+      +'</tr>';
+    return{t:t,sv:getSV(d),html:row};
+  }).filter(Boolean);
+
+  rows.sort(function(a,z){
+    if(typeof a.sv==='string') return sAsc?a.sv.localeCompare(z.sv):z.sv.localeCompare(a.sv);
+    return sAsc?a.sv-z.sv:z.sv-a.sv;
+  });
+
+  document.getElementById('tBody').innerHTML=rows.map(function(r){ return r.html; }).join('');
+  document.getElementById('cH').textContent=h;
+  document.getElementById('cB').textContent=b;
+  document.getElementById('cHo').textContent=ho;
+  document.getElementById('cS').textContent=s;
+  updateMood();
+}
+
+function rowClick(t){
+  sel=t;
+  renderTable();
+  showChart(t);
+}
+
+function delRow(t){
+  delete cache[t];
+  if(sel===t) closeChart();
+  renderTable();
+}
+
+function showChart(t){
+  var d=cache[t];
+  document.getElementById('cTicker').textContent=t+'.JK';
+  document.getElementById('cFase').innerHTML=d&&d.ok?fBadge(d.fase):'';
+  document.getElementById('cAksi').innerHTML=d&&d.ok?aBadge(d.aksi):'';
+  document.getElementById('cPwr').innerHTML=d&&d.ok?pwrDots(d.pwr,d.fase):'';
+  document.getElementById('cBdr').innerHTML=d&&d.ok?bBadge(d.bdr):'';
+  if(d&&d.ok){
+    document.getElementById('cTpSl').innerHTML=
+      '<span class="tp-v">TP '+(d.tp||0).toLocaleString('id-ID')+'</span> &nbsp; '+
+      '<span class="sl-v">SL '+(d.sl||0).toLocaleString('id-ID')+'</span>';
   }
+  var tvUrl='https://s.tradingview.com/widgetembed/?frameElementId=tv_'+t+
+    '&symbol=IDX%3A'+t+
+    '&interval=D&hidesidetoolbar=0&saveimage=0'+
+    '&studies=RSI%40tv-basicstudies%1FMACD%40tv-basicstudies%1FVolume%40tv-basicstudies'+
+    '&theme=dark&style=1&timezone=Asia%2FJakarta&withdateranges=1&locale=id';
+  document.getElementById('tvWrap').innerHTML='<iframe src="'+tvUrl+'" allowtransparency="true" frameborder="0" scrolling="no"></iframe>';
+  var panel=document.getElementById('chartPanel');
+  panel.style.display='block';
+  panel.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
 
-  async function scanNow() {
-    document.getElementById('overlay').classList.add('show');
-    try {
-      const res  = await fetch('/screener');
-      const json = await res.json();
-      if (json && json.length > 0) {
-        allData = json;
-        renderTable();
-        updateSummary();
-        document.getElementById('lastScan').textContent =
-          new Date().toLocaleString('id-ID');
-      }
-    } catch (err) {
-      console.error('Error scan:', err);
-    }
-    document.getElementById('overlay').classList.remove('show');
-  }
+function closeChart(){
+  document.getElementById('chartPanel').style.display='none';
+  document.getElementById('tvWrap').innerHTML='';
+  sel=null;
+  renderTable();
+}
 
-  function startCountdown() {
-    countdown = totalSeconds;
-    const interval = setInterval(() => {
-      countdown--;
-      document.getElementById('countdown').textContent = countdown;
-      const pct = (countdown / totalSeconds) * 100;
-      document.getElementById('progressFill').style.width = pct + '%';
+function addStock(){
+  var inp=document.getElementById('addInp');
+  var v=inp.value.trim().toUpperCase().replace('.JK','').replace(/[^A-Z0-9]/g,'');
+  if(!v){ inp.value=''; return; }
+  inp.value='';
+  cache[v]={ticker:v,ok:false,error:'Loading...'};
+  renderTable();
+  fetch('/screener/'+v)
+    .then(function(r){ return r.json(); })
+    .then(function(d){ cache[v]=d; renderTable(); })
+    .catch(function(e){ cache[v]={ticker:v,ok:false,error:e.message}; renderTable(); });
+}
 
-      if (countdown <= 0) {
-        clearInterval(interval);
-        fetchData();
-        startCountdown();
-      }
-    }, 1000);
-  }
+document.getElementById('addInp').addEventListener('keydown',function(e){
+  if(e.key==='Enter') addStock();
+});
 
-  window.onload = async function() {
-    await fetchData();
-    startCountdown();
-  };
+setStatus('loading');
+fetchData();
 </script>
-
 </body>
 </html>
-  

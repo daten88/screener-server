@@ -35,8 +35,8 @@ function calculateMACD(closes) {
     if (!result.length) return { macd: 0, signal: 0, hist: 0 };
     const last = result[result.length - 1];
     return {
-      macd:   parseFloat((last.MACD   ?? 0).toFixed(2)),
-      signal: parseFloat((last.signal ?? 0).toFixed(2)),
+      macd:   parseFloat((last.MACD      ?? 0).toFixed(2)),
+      signal: parseFloat((last.signal    ?? 0).toFixed(2)),
       hist:   parseFloat((last.histogram ?? 0).toFixed(2))
     };
   } catch { return { macd: 0, signal: 0, hist: 0 }; }
@@ -94,8 +94,8 @@ function calculateWick(highs, lows, closes) {
 
 // ===== BDR =====
 function calculateBDR(volumes, closes, rvol) {
-  const n   = 20;
-  const rv  = volumes.slice(-n);
+  const n    = 20;
+  const rv   = volumes.slice(-n);
   const avgV = avg(rv);
   let big = 0;
   for (let i = 1; i < rv.length; i++) {
@@ -113,18 +113,18 @@ function calculateBDR(volumes, closes, rvol) {
 // ===== PWR =====
 function calculatePWR(rsi, macd, macdSig, rvol, chg, hist) {
   let s = 0;
-  if (rsi < 30)       s += 2;
-  else if (rsi < 45)  s += 1;
-  else if (rsi > 75)  s -= 2;
-  else if (rsi > 65)  s -= 1;
-  if (macd > macdSig) s += 1;
-  if (hist > 0)       s += 1;
-  if (rvol > 2.5)     s += 2;
+  if (rsi < 30)        s += 2;
+  else if (rsi < 45)   s += 1;
+  else if (rsi > 75)   s -= 2;
+  else if (rsi > 65)   s -= 1;
+  if (macd > macdSig)  s += 1;
+  if (hist > 0)        s += 1;
+  if (rvol > 2.5)      s += 2;
   else if (rvol > 1.5) s += 1;
   else if (rvol < 0.6) s -= 1;
-  if (chg > 3)        s += 1;
-  else if (chg < -4)  s -= 2;
-  else if (chg < -2)  s -= 1;
+  if (chg > 3)         s += 1;
+  else if (chg < -4)   s -= 2;
+  else if (chg < -2)   s -= 1;
   return Math.min(5, Math.max(1, s));
 }
 
@@ -132,11 +132,11 @@ function calculatePWR(rsi, macd, macdSig, rvol, chg, hist) {
 function calculateFASE(rsi, macd, macdSig, chg, wick, hist) {
   const bull   = macd > macdSig;
   const rising = hist > 0;
-  if (chg > 3  && bull && rsi > 50 && rsi < 78) return 'BREAKOUT';
-  if (wick > 20 && rsi < 52 && bull)             return 'REBOUND';
-  if (rsi < 36  && bull && rising)               return 'REBOUND';
-  if (chg < -4  && !bull)                        return 'BREAKDOWN';
-  if (!bull     && rsi > 65)                     return 'BREAKDOWN';
+  if (chg > 3   && bull && rsi > 50 && rsi < 78) return 'BREAKOUT';
+  if (wick > 20 && rsi < 52 && bull)              return 'REBOUND';
+  if (rsi < 36  && bull && rising)                return 'REBOUND';
+  if (chg < -4  && !bull)                         return 'BREAKDOWN';
+  if (!bull     && rsi > 65)                      return 'BREAKDOWN';
   return 'SIDEWAYS';
 }
 
@@ -144,26 +144,42 @@ function calculateFASE(rsi, macd, macdSig, chg, wick, hist) {
 function calculateAKSI(rsi, macd, macdSig, rvol, chg, pwr, fase) {
   const bull = macd > macdSig;
   if (pwr >= 4 && bull && (fase === 'BREAKOUT' || fase === 'REBOUND') && rvol > 1.3) return 'HAKA';
-  if (pwr >= 3 && bull && fase !== 'BREAKDOWN') return 'BUY';
-  if (fase === 'BREAKDOWN' || (pwr <= 2 && !bull && rsi > 60))                       return 'SELL';
+  if (pwr >= 3 && bull && fase !== 'BREAKDOWN')                                       return 'BUY';
+  if (fase === 'BREAKDOWN' || (pwr <= 2 && !bull && rsi > 60))                        return 'SELL';
   return 'HOLD';
+}
+
+// ===== FRAKSI HARGA =====
+function getFraksi(price) {
+  if (price <  200)  return 1;
+  if (price <  500)  return 2;
+  if (price < 2000)  return 5;
+  if (price < 5000)  return 10;
+  return 25;
+}
+
+function roundToFraksi(price, fraksi) {
+  return Math.round(price / fraksi) * fraksi;
 }
 
 // ===== TP & SL =====
 function calculateTPSL(price, atr, fase, aksi, highs, lows) {
   const resist  = Math.max(...highs.slice(-10));
   const support = Math.min(...lows.slice(-10));
+  const fraksi  = getFraksi(price);
   let tp, sl;
+
   if (aksi === 'SELL') {
-    tp = Math.round(price - atr * 1.5);
-    sl = Math.round(price + atr * 1.0);
+    tp = roundToFraksi(price - atr * 1.5, fraksi);
+    sl = roundToFraksi(price + atr * 1.0, fraksi);
   } else {
     const mult = fase === 'BREAKOUT' ? 2.5 : 2.0;
-    tp = Math.round(Math.min(price + atr * mult, resist * 1.02));
-    sl = Math.round(Math.max(price - atr * 1.0, support * 0.99));
-    if (tp <= price) tp = Math.round(price + atr * 1.5);
-    if (sl >= price) sl = Math.round(price - atr * 0.8);
+    tp = roundToFraksi(Math.min(price + atr * mult, resist * 1.02), fraksi);
+    sl = roundToFraksi(Math.max(price - atr * 1.0, support * 0.99), fraksi);
+    if (tp <= price) tp = roundToFraksi(price + atr * 1.5, fraksi);
+    if (sl >= price) sl = roundToFraksi(price - atr * 0.8, fraksi);
   }
+
   return { tp, sl };
 }
 
@@ -175,5 +191,6 @@ module.exports = {
   calculateATR,    calculateCHG,
   calculateWick,   calculateBDR,
   calculatePWR,    calculateFASE,
-  calculateAKSI,   calculateTPSL
+  calculateAKSI,   calculateTPSL,
+  getFraksi,       roundToFraksi
 };

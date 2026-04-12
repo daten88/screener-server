@@ -15,23 +15,6 @@ cron.schedule('0,30 9-15 * * 1-5', async () => {
   lastScanTime = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
 }, { timezone: 'Asia/Jakarta' });
 
-app.get('/', (req, res) => {
-  res.json({
-    status:     'Bot Screener Saham Aktif',
-    lastScan:   lastScanTime ?? 'Belum scan',
-    totalSaham: WATCHLIST.length,
-    watchlist:  WATCHLIST,
-    endpoints: {
-      '/screener':         'Scan semua watchlist',
-      '/screener/:ticker': 'Scan 1 saham spesifik',
-      '/hasil':            'Lihat hasil scan terakhir',
-      '/hasil/haka':       'Filter sinyal HAKA',
-      '/hasil/buy':        'Filter sinyal BUY',
-      '/hasil/sell':       'Filter sinyal SELL'
-    }
-  });
-});
-
 app.get('/screener', async (req, res) => {
   try {
     const results = await runScreener();
@@ -56,9 +39,6 @@ app.get('/screener/:ticker', async (req, res) => {
 });
 
 app.get('/hasil', (req, res) => {
-  if (!lastResults.length) {
-    return res.json({ message: 'Belum ada hasil scan' });
-  }
   res.json({
     lastScan: lastScanTime,
     total:    lastResults.length,
@@ -67,30 +47,18 @@ app.get('/hasil', (req, res) => {
 });
 
 app.get('/hasil/haka', (req, res) => {
-  const filtered = lastResults.filter(r => r.signal === 'HAKA');
-  res.json({
-    lastScan: lastScanTime,
-    total:    filtered.length,
-    data:     filtered
-  });
+  const filtered = lastResults.filter(r => r.signal.includes('HAKA'));
+  res.json({ lastScan: lastScanTime, total: filtered.length, data: filtered });
 });
 
 app.get('/hasil/buy', (req, res) => {
-  const filtered = lastResults.filter(r => r.signal === 'BUY');
-  res.json({
-    lastScan: lastScanTime,
-    total:    filtered.length,
-    data:     filtered
-  });
+  const filtered = lastResults.filter(r => r.signal.includes('BUY'));
+  res.json({ lastScan: lastScanTime, total: filtered.length, data: filtered });
 });
 
 app.get('/hasil/sell', (req, res) => {
-  const filtered = lastResults.filter(r => r.signal === 'SELL');
-  res.json({
-    lastScan: lastScanTime,
-    total:    filtered.length,
-    data:     filtered
-  });
+  const filtered = lastResults.filter(r => r.signal.includes('SELL'));
+  res.json({ lastScan: lastScanTime, total: filtered.length, data: filtered });
 });
 
 app.listen(PORT, async () => {

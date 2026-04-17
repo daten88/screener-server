@@ -5,7 +5,6 @@ function avg(arr) {
   return arr.reduce((a, b) => a + b, 0) / arr.length;
 }
 
-// ===== RSI =====
 function calculateRSI(closes, period = 14) {
   try {
     const rsi = TI.RSI.calculate({ values: closes, period });
@@ -21,7 +20,6 @@ function getRSISignal(rsi) {
   return           { label: 'OVERBOUGHT',  score: -1 };
 }
 
-// ===== MACD =====
 function calculateMACD(closes) {
   try {
     const result = TI.MACD.calculate({
@@ -95,7 +93,6 @@ function getZoneLabel(zone) {
   }
 }
 
-// ===== RVOL =====
 function calculateRVOL(volumes) {
   if (volumes.length < 21) return 1;
   const avg20 = avg(volumes.slice(-21, -1));
@@ -111,7 +108,6 @@ function getRVOLSignal(rvol) {
   return             { label: 'BANDAR MASUK', score: 3 };
 }
 
-// ===== ATR =====
 function calculateATR(highs, lows, closes, period = 14) {
   const trs = [];
   for (let i = 1; i < highs.length; i++) {
@@ -124,13 +120,11 @@ function calculateATR(highs, lows, closes, period = 14) {
   return avg(trs.slice(-period));
 }
 
-// ===== CHG% =====
 function calculateCHG(price, prevClose) {
   if (!prevClose) return 0;
   return parseFloat(((price - prevClose) / prevClose * 100).toFixed(2));
 }
 
-// ===== WICK =====
 function calculateWick(highs, lows, closes) {
   const h  = highs[highs.length - 1]   || 0;
   const l  = lows[lows.length - 1]     || 0;
@@ -139,7 +133,6 @@ function calculateWick(highs, lows, closes) {
   return (Math.min(c, pv) - l) / (h - l || 1) * 100;
 }
 
-// ===== BDR =====
 function calculateBDR(volumes, closes, rvol, rsi, wick) {
   const n    = 20;
   const rv   = volumes.slice(-n);
@@ -160,33 +153,24 @@ function calculateBDR(volumes, closes, rvol, rsi, wick) {
   const c2 = closes[closes.length - 2];
   const c3 = closes[closes.length - 3];
 
-  // BIG ACC
   if (rvol > 2   && bigUp >= 4 && c1 >= c2 && c2 >= c3) return { label: 'BIG ACC', score: 3 };
-
-  // AKUM normal
   if (rvol > 1.4 && bigUp >= 2)                          return { label: 'AKUM',    score: 2 };
 
-  // AKUM TERSELUBUNG - bandar tekan harga untuk kumpul
   if (rvol > 1.5 && bigDown >= 2 && c1 < c2 && rsi < 40) {
     if (wick > 25) return { label: 'AKUM',  score: 2 };
     return           { label: 'AKUM?', score: 1 };
   }
 
-  // AKUM? - potensi akumulasi tapi belum pasti
   if (rvol > 1.5 && bigDown >= 2 && c1 < c2 && rsi < 45 && wick > 30) {
     return { label: 'AKUM?', score: 1 };
   }
 
-  // DIST agresif
   if (rvol > 1.5 && bigDown >= 3 && c1 < c2 && rsi > 55) return { label: 'DIST', score: -2 };
-
-  // DIST halus
   if (rvol > 1.2 && bigDown >= 2 && c1 < c2 && c2 < c3 && rsi > 50) return { label: 'DIST', score: -2 };
 
   return { label: '', score: 0 };
 }
 
-// ===== PWR =====
 function calculatePWR(rsi, macd, macdSig, rvol, chg, hist, goldenCross, deathCross) {
   let s = 0;
 
@@ -212,7 +196,6 @@ function calculatePWR(rsi, macd, macdSig, rvol, chg, hist, goldenCross, deathCro
   return Math.min(5, Math.max(1, s));
 }
 
-// ===== FASE =====
 function calculateFASE(rsi, macd, macdSig, chg, wick, hist) {
   const bull   = macd > macdSig;
   const rising = hist > 0;
@@ -224,29 +207,114 @@ function calculateFASE(rsi, macd, macdSig, chg, wick, hist) {
   return 'SIDEWAYS';
 }
 
-// ===== AKSI =====
 function calculateAKSI(rsi, macd, macdSig, rvol, chg, pwr, fase, goldenCross, deathCross, bdr, zone) {
   const bull     = macd > macdSig;
   const bullZone = zone === 'BULL_ZONE' || zone === 'ZERO_CROSS_UP';
   const bearZone = zone === 'BEAR_ZONE' || zone === 'ZERO_CROSS_DOWN';
 
   // SELL prioritas tertinggi
-  if (deathCross)                        return 'SELL';
-  if (bdr === 'DIST' && !bull)           return 'SELL';
-  if (rsi > 70 && !bull)                 return 'SELL';
-  if (fase === 'BREAKDOWN')              return 'SELL';
-  if (pwr <= 2 && !bull && rsi > 60)     return 'SELL';
+  if (deathCross)                    return 'SELL';
+  if (bdr === 'DIST' && !bull)       return 'SELL';
+  if (rsi > 70 && !bull)             return 'SELL';
+  if (fase === 'BREAKDOWN')          return 'SELL';
+  if (pwr <= 2 && !bull && rsi > 60) return 'SELL';
 
-  // Proteksi DIST di bull zone = jebakan bull
-  if (bdr === 'DIST' && bullZone)        return 'HOLD';
-
-  // Golden Cross di bear zone + DIST = semua negatif
+  // Proteksi DIST di bull zone
+  if (bdr === 'DIST' && bullZone)              return 'HOLD';
   if (goldenCross && bearZone && bdr === 'DIST') return 'SELL';
 
-  // Golden Cross + bull + volume
+  // Golden Cross
   if (goldenCross && bull && rvol > 1.0) {
     return bearZone ? 'BUY' : 'HAKA';
   }
 
   // AKUM terselubung terkonfirmasi
-  if (bdr === 'AKUM' && bull
+  if (bdr === 'AKUM' && bull && rsi < 45 && fase !== 'BREAKDOWN') return 'BUY';
+
+  // HAKA normal
+  if (pwr >= 4 && bull && (fase === 'BREAKOUT' || fase === 'REBOUND') && rvol > 1.3) {
+    return bullZone ? 'HAKA' : 'BUY';
+  }
+
+  // BUY standar
+  if (pwr >= 3 && bull && fase !== 'BREAKDOWN') {
+    return bearZone ? 'HOLD' : 'BUY';
+  }
+
+  return 'HOLD';
+}
+
+function getFraksi(price) {
+  if (price <  200)  return 1;
+  if (price <  500)  return 2;
+  if (price < 2000)  return 5;
+  if (price < 5000)  return 10;
+  return 25;
+}
+
+function roundToFraksi(price, fraksi) {
+  return Math.round(price / fraksi) * fraksi;
+}
+
+function calculateTPSL(price, atr, fase, aksi, highs, lows) {
+  const resist  = Math.max(...highs.slice(-10));
+  const support = Math.min(...lows.slice(-10));
+  const fraksi  = getFraksi(price);
+  let tp, sl;
+
+  if (aksi === 'SELL') {
+    tp = roundToFraksi(price - atr * 1.5, fraksi);
+    sl = roundToFraksi(price + atr * 1.0, fraksi);
+  } else {
+    const mult = fase === 'BREAKOUT' ? 2.5 : 2.0;
+    tp = roundToFraksi(Math.min(price + atr * mult, resist * 1.02), fraksi);
+    sl = roundToFraksi(Math.max(price - atr * 1.0, support * 0.99), fraksi);
+    if (tp <= price) tp = roundToFraksi(price + atr * 1.5, fraksi);
+    if (sl >= price) sl = roundToFraksi(price - atr * 0.8, fraksi);
+  }
+
+  return { tp, sl };
+}
+
+function calculateEntry(price, atr, fase, aksi, highs, lows) {
+  const fraksi  = getFraksi(price);
+  const support = Math.min(...lows.slice(-10));
+  let e1, e2, e3;
+
+  if (aksi === 'SELL') {
+    return { e1: null, e2: null, e3: null };
+  }
+
+  if (fase === 'BREAKOUT') {
+    e1 = roundToFraksi(price, fraksi);
+    e2 = roundToFraksi(price - atr * 0.3, fraksi);
+    e3 = roundToFraksi(price - atr * 0.6, fraksi);
+  } else if (fase === 'REBOUND') {
+    e1 = roundToFraksi(price, fraksi);
+    e2 = roundToFraksi(price - atr * 0.5, fraksi);
+    e3 = roundToFraksi(Math.max(support * 1.01, price - atr * 1.0), fraksi);
+  } else {
+    e1 = roundToFraksi(price, fraksi);
+    e2 = roundToFraksi(price - atr * 0.4, fraksi);
+    e3 = roundToFraksi(price - atr * 0.8, fraksi);
+  }
+
+  const sl = roundToFraksi(Math.max(price - atr * 1.0, support * 0.99), fraksi);
+  if (e3 <= sl) e3 = roundToFraksi(sl + fraksi * 2, fraksi);
+  if (e2 <= sl) e2 = roundToFraksi(sl + fraksi * 4, fraksi);
+
+  return { e1, e2, e3 };
+}
+
+module.exports = {
+  avg,
+  calculateRSI,    getRSISignal,
+  calculateMACD,   getMACDSignal,  getZoneLabel,
+  calculateRVOL,   getRVOLSignal,
+  calculateATR,    calculateCHG,
+  calculateWick,   calculateBDR,
+  calculatePWR,    calculateFASE,
+  calculateAKSI,   calculateTPSL,
+  calculateEntry,  getFraksi,
+  roundToFraksi
+};

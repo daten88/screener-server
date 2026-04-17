@@ -93,6 +93,9 @@ tr.sel td{background:#0a1a2a}
 .tv-wrap iframe{width:100%;height:100%;border:none}
 .note{font-size:10px;color:#333;margin-top:10px;line-height:1.8}
 .err-t{font-size:11px;color:#ff4444}
+.b-dist{background:#2a0a0a;color:#ff4444;border:1px solid #ff4444}
+.b-dist-warn{background:#2a1500;color:#ff8800;border:1px solid #ff8800;animation:warnpulse 1.5s infinite}
+@keyframes warnpulse{0%,100%{opacity:1}50%{opacity:.5}}
 /* Golden / Death Cross & Zone badges */
 .b-golden{background:#1a1400;color:#ffd700;border:1px solid #ffd700}
 .b-death{background:#1a0000;color:#ff4444;border:1px solid #ff4444}
@@ -290,9 +293,17 @@ function fBadge(f){
   return '<span class="badge '+(m[f]||'b-sw')+'">'+f+'</span>';
 }
 
-function bBadge(b){
+function bBadge(b, zone){
   if(!b) return '<span style="color:#333;font-size:11px">&mdash;</span>';
-  var m={'BIG ACC':'b-bo','AKUM':'b-ba','DIST':'b-bd'};
+  // DIST + BULL ZONE = jebakan bull → warning berkedip
+  if(b==='DIST'){
+    var isBullZone = zone==='BULL_ZONE'||zone==='ZERO_CROSS_UP';
+    if(isBullZone) return '<span class="badge b-dist-warn" title="⚠️ JEBAKAN BULL: Bandar distribusi saat trend bullish">⚠️ DIST!</span>';
+    return '<span class="badge b-dist">DIST</span>';
+  }
+  // AKUM? = akumulasi terselubung, belum terkonfirmasi penuh
+  if(b==='AKUM?') return '<span class="badge" style="background:#001a1a;color:#00cccc;border:1px solid #00cccc" title="Potensi akumulasi terselubung — bandar tekan harga untuk kumpul, belum konfirmasi penuh">🔍 AKUM?</span>';
+  var m={'BIG ACC':'b-bo','AKUM':'b-ba'};
   return '<span class="badge '+(m[b]||'b-sw')+'">'+b+'</span>';
 }
 
@@ -394,7 +405,7 @@ function renderTable(){
       +'<td style="color:'+mc+';font-weight:500;font-size:11px">'+(d.macd>0?'+':'')+d.macd+'</td>'
       +'<td>'+crossBadge(d.goldenCross,d.deathCross,d.zone)+'</td>'
       +'<td style="font-size:11px;color:'+rc+'">'+d.rvol.toFixed(1)+'x</td>'
-      +'<td>'+bBadge(d.bdr)+'</td>'
+      +'<td>'+bBadge(d.bdr,d.zone)+'</td>'
       +'<td>'+pwrDots(d.pwr,d.fase)+'</td>'
       +'<td>'+fBadge(d.fase)+'</td>'
       +'<td><span style="color:#aaffcc;font-size:11px;font-weight:500">'+(d.e1?d.e1.toLocaleString('id-ID'):'&mdash;')+'</span></td>'
@@ -439,7 +450,7 @@ function showChart(t){
   document.getElementById('cFase').innerHTML=d&&d.ok?fBadge(d.fase):'';
   document.getElementById('cAksi').innerHTML=d&&d.ok?aBadge(d.aksi):'';
   document.getElementById('cPwr').innerHTML=d&&d.ok?pwrDots(d.pwr,d.fase):'';
-  document.getElementById('cBdr').innerHTML=d&&d.ok?bBadge(d.bdr):'';
+  document.getElementById('cBdr').innerHTML=d&&d.ok?bBadge(d.bdr,d.zone):'';
   document.getElementById('cCross').innerHTML=d&&d.ok?crossBadge(d.goldenCross,d.deathCross,d.zone):'';
   if(d&&d.ok){
     document.getElementById('cTpSl').innerHTML=

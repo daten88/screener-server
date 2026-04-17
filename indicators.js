@@ -14,14 +14,17 @@ function calculateRSI(closes, period = 14) {
 }
 
 function getRSISignal(rsi) {
-  if (rsi < 30)  return { label: 'OVERSOLD', score: 3 };
+  if (rsi < 30)  return { label: 'OVERSOLD',    score: 3 };
   if (rsi < 45)  return { label: 'MULAI PULIH', score: 2 };
-  if (rsi < 55)  return { label: 'NETRAL', score: 0 };
-  if (rsi < 70)  return { label: 'BULLISH', score: 1 };
-  return           { label: 'OVERBOUGHT', score: -1 };
+  if (rsi < 55)  return { label: 'NETRAL',      score: 0 };
+  if (rsi < 70)  return { label: 'BULLISH',     score: 1 };
+  return           { label: 'OVERBOUGHT',  score: -1 };
 }
 
 // ===== MACD =====
+// Golden Cross : MACD line baru crossing KE ATAS signal line (konvensional)
+// Death Cross  : MACD line baru crossing KE BAWAH signal line (konvensional)
+// Zone         : posisi MACD terhadap garis nol → filter kualitas sinyal cross
 function calculateMACD(closes) {
   try {
     const result = TI.MACD.calculate({
@@ -32,48 +35,76 @@ function calculateMACD(closes) {
       SimpleMAOscillator: false,
       SimpleMASignal: false
     });
+
     if (!result.length) return {
       macd: 0, signal: 0, hist: 0,
       macdPrev: 0, signalPrev: 0,
-      goldenCross: false, deathCross: false
+      goldenCross: false, deathCross: false,
+      zone: 'BEAR_ZONE'
     };
 
     const last = result[result.length - 1];
-    const prev = result[result.length - 2] || last;
+    const prev = result.length >= 2 ? result[result.length - 2] : last;
 
     const macdNow  = parseFloat((last.MACD      ?? 0).toFixed(2));
     const sigNow   = parseFloat((last.signal    ?? 0).toFixed(2));
+    const histNow  = parseFloat((last.histogram ?? 0).toFixed(2));
     const macdPrev = parseFloat((prev.MACD      ?? 0).toFixed(2));
     const sigPrev  = parseFloat((prev.signal    ?? 0).toFixed(2));
 
-    // Golden Cross = kemarin MACD di bawah Signal, hari ini MACD di atas Signal
+    // Golden Cross: kemarin MACD < Signal, sekarang MACD > Signal
     const goldenCross = macdPrev < sigPrev && macdNow > sigNow;
 
-    // Death Cross = kemarin MACD di atas Signal, hari ini MACD di bawah Signal
+    // Death Cross: kemarin MACD > Signal, sekarang MACD < Signal
     const deathCross  = macdPrev > sigPrev && macdNow < sigNow;
+
+    // Zone: posisi MACD terhadap garis nol
+    // Digunakan sebagai filter kualitas:
+    //   Golden Cross di BULL_ZONE    → konfirmasi penuh (MACD & momentum sama-sama positif)
+    //   Golden Cross di BEAR_ZONE    → hati-hati (cross terjadi tapi MACD masih negatif)
+    //   Death Cross  di BEAR_ZONE    → konfirmasi penuh (jual)
+    //   Death Cross  di BULL_ZONE    → bisa false signal (MACD masih di atas nol)
+    let zone;
+    if      (macdPrev < 0 && macdNow >= 0) zone = 'ZERO_CROSS_UP';
+    else if (macdPrev > 0 && macdNow <= 0) zone = 'ZERO_CROSS_DOWN';
+    else if (macdNow > 0)                  zone = 'BULL_ZONE';
+    else                                   zone = 'BEAR_ZONE';
 
     return {
       macd:        macdNow,
       signal:      sigNow,
-      hist:        parseFloat((last.histogram ?? 0).toFixed(2)),
+      hist:        histNow,
       macdPrev,
       signalPrev:  sigPrev,
       goldenCross,
-      deathCross
+      deathCross,
+      zone
     };
   } catch {
     return {
       macd: 0, signal: 0, hist: 0,
       macdPrev: 0, signalPrev: 0,
-      goldenCross: false, deathCross: false
+      goldenCross: false, deathCross: false,
+      zone: 'BEAR_ZONE'
     };
   }
 }
 
-function getMACDSignal(macd, signal) {
-  if (macd > signal) return { label: 'BULLISH', score: 2 };
-  if (macd < signal) return { label: 'BEARISH', score: -1 };
-  return               { label: 'NETRAL', score: 0 };
+function getMACDSignal(macd, signal, goldenCross, deathCross) {
+  if (goldenCross)   return { label: 'GOLDEN CROSS', score: 3 };
+  if (deathCross)    return { label: 'DEATH CROSS',  score: -3 };
+  if (macd > signal) return { label: 'BULLISH',      score: 2 };
+  if (macd < signal) return { label: 'BEARISH',      score: -1 };
+  return               { label: 'NETRAL',            score: 0 };
+}
+
+function getZoneLabel(zone) {
+  switch (zone) {
+    case 'ZERO_CROSS_UP':   return '⬆️ ZERO CROSS UP';
+    case 'ZERO_CROSS_DOWN': return '⬇️ ZERO CROSS DOWN';
+    case 'BULL_ZONE':       return '🔵 BULL ZONE';
+    default:                return '⚫ BEAR ZONE';
+  }
 }
 
 // ===== RVOL =====
@@ -85,11 +116,11 @@ function calculateRVOL(volumes) {
 }
 
 function getRVOLSignal(rvol) {
-  if (rvol < 0.6)  return { label: 'SEPI', score: -1 };
-  if (rvol < 1.0)  return { label: 'NORMAL', score: 0 };
-  if (rvol < 1.5)  return { label: 'RAMAI', score: 1 };
-  if (rvol < 2.0)  return { label: 'AKTIF', score: 2 };
-  return             { label: 'BANDAR MASUK', score: 3 };
+  if (rvol < 0.6)  return { label: 'SEPI',         score: -1 };
+  if (rvol < 1.0)  return { label: 'NORMAL',        score: 0 };
+  if (rvol < 1.5)  return { label: 'RAMAI',         score: 1 };
+  if (rvol < 2.0)  return { label: 'AKTIF',         score: 2 };
+  return             { label: 'BANDAR MASUK',  score: 3 };
 }
 
 // ===== ATR =====
@@ -139,25 +170,27 @@ function calculateBDR(volumes, closes, rvol) {
 }
 
 // ===== PWR =====
+// Golden Cross boost +2, Death Cross penalti -2 (dari referensi)
 function calculatePWR(rsi, macd, macdSig, rvol, chg, hist, goldenCross, deathCross) {
   let s = 0;
+
   if (rsi < 30)        s += 2;
   else if (rsi < 45)   s += 1;
   else if (rsi > 75)   s -= 2;
   else if (rsi > 65)   s -= 1;
+
   if (macd > macdSig)  s += 1;
   if (hist > 0)        s += 1;
+
   if (rvol > 2.5)      s += 2;
   else if (rvol > 1.5) s += 1;
   else if (rvol < 0.6) s -= 1;
+
   if (chg > 3)         s += 1;
   else if (chg < -4)   s -= 2;
   else if (chg < -2)   s -= 1;
 
-  // Golden Cross boost PWR
   if (goldenCross)     s += 2;
-
-  // Death Cross turunkan PWR
   if (deathCross)      s -= 2;
 
   return Math.min(5, Math.max(1, s));
@@ -176,32 +209,44 @@ function calculateFASE(rsi, macd, macdSig, chg, wick, hist) {
 }
 
 // ===== AKSI / SINYAL AKHIR =====
-function calculateAKSI(rsi, macd, macdSig, rvol, chg, pwr, fase, goldenCross, deathCross, bdr) {
-  const bull = macd > macdSig;
+// Urutan prioritas dari referensi + filter zone dari versi kita
+function calculateAKSI(rsi, macd, macdSig, rvol, chg, pwr, fase, goldenCross, deathCross, bdr, zone) {
+  const bull     = macd > macdSig;
+  const bullZone = zone === 'BULL_ZONE' || zone === 'ZERO_CROSS_UP';
+  const bearZone = zone === 'BEAR_ZONE' || zone === 'ZERO_CROSS_DOWN';
 
-  // Death Cross = langsung SELL
+  // ── SELL (prioritas tertinggi) ───────────────────────────────────────
+  // 1. Death Cross → langsung SELL
   if (deathCross) return 'SELL';
 
-  // BDR distribusi + bearish = SELL
+  // 2. BDR distribusi + bearish → SELL
   if (bdr === 'DIST' && !bull) return 'SELL';
 
-  // RSI overbought + histogram negatif = SELL
+  // 3. RSI overbought + bearish → SELL
   if (rsi > 70 && !bull) return 'SELL';
 
-  // Fase breakdown = SELL
+  // 4. Fase BREAKDOWN → SELL
   if (fase === 'BREAKDOWN') return 'SELL';
 
-  // PWR lemah + bearish + RSI tinggi = SELL
+  // 5. PWR lemah + bearish + RSI tinggi → SELL
   if (pwr <= 2 && !bull && rsi > 60) return 'SELL';
 
-  // Golden Cross = boost ke HAKA jika syarat terpenuhi
-  if (goldenCross && bull && rvol > 1.0) return 'HAKA';
+  // ── BUY (dari terkuat ke terlemah) ──────────────────────────────────
+  // 6. Golden Cross + bull + volume → HAKA
+  //    Tapi jika terjadi di BEAR_ZONE (MACD masih negatif) → turunkan ke BUY
+  if (goldenCross && bull && rvol > 1.0) {
+    return bearZone ? 'BUY' : 'HAKA';
+  }
 
-  // HAKA normal
-  if (pwr >= 4 && bull && (fase === 'BREAKOUT' || fase === 'REBOUND') && rvol > 1.3) return 'HAKA';
+  // 7. HAKA normal → wajib BULL_ZONE agar tidak counter-trend
+  if (pwr >= 4 && bull && (fase === 'BREAKOUT' || fase === 'REBOUND') && rvol > 1.3) {
+    return bullZone ? 'HAKA' : 'BUY';
+  }
 
-  // BUY
-  if (pwr >= 3 && bull && fase !== 'BREAKDOWN') return 'BUY';
+  // 8. BUY standar → jika BEAR_ZONE turunkan ke HOLD
+  if (pwr >= 3 && bull && fase !== 'BREAKDOWN') {
+    return bearZone ? 'HOLD' : 'BUY';
+  }
 
   return 'HOLD';
 }
@@ -274,7 +319,7 @@ function calculateEntry(price, atr, fase, aksi, highs, lows) {
 module.exports = {
   avg,
   calculateRSI,    getRSISignal,
-  calculateMACD,   getMACDSignal,
+  calculateMACD,   getMACDSignal,  getZoneLabel,
   calculateRVOL,   getRVOLSignal,
   calculateATR,    calculateCHG,
   calculateWick,   calculateBDR,

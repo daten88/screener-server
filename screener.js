@@ -11,16 +11,16 @@ const {
 } = require('./indicators');
 
 const WATCHLIST = [
-  'AHAP', 'ARCI', 'BIPI', 'BNBR', 'BRMS',
-  'BULL', 'BUMI', 'BUVA', 'CUAN', 'DATA',
-  'DEWA', 'ENRG', 'GTSI', 'HUMI', 'INDY',
-  'IMPC', 'MBMA', 'MINA', 'NINE', 'PADA',
-  'PADI', 'PANI', 'PSKT', 'RAJA', 'SOFA',
-  'TPIA', 'TRUE', 'VKTR', 'WIFI', 'ZATA',
-  'KETR', 'KPIG', 'COIN', 'COCO', 'TAPG',
-  'BWPT', 'SUPA', 'WMUU', 'BBYB', 'OASA',
-  'TRIN', 'EMAS', 'DOOH', 'KBLV', 'PBSA',
-  'KLAS', 'PNLF', 'PTRO', 'TOBA', 'SOCI',
+  'AHAP', 'ARCI', 'BBYB', 'BIPI', 'BNBR',
+  'BRMS', 'BULL', 'BUMI', 'BUVA', 'BWPT',
+  'COCO', 'COIN', 'CUAN', 'DATA', 'DEWA',
+  'DOOH', 'EMAS', 'ENRG', 'GTSI', 'HUMI',
+  'IMPC', 'INDY', 'KBLV', 'KETR', 'KLAS',
+  'KPIG', 'MBMA', 'MINA', 'NINE', 'OASA',
+  'PADA', 'PADI', 'PANI', 'PBSA', 'PNLF',
+  'PSKT', 'PTRO', 'RAJA', 'SOCI', 'SOFA',
+  'SUPA', 'TAPG', 'TOBA', 'TPIA', 'TRIN',
+  'TRUE', 'VKTR', 'WIFI', 'WMUU', 'ZATA',
 ];
 
 const HEADERS = {

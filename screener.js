@@ -100,7 +100,7 @@ async function screenStock(ticker) {
   const atr                                              = calculateATR(highs, lows, closes);
   const chg                                              = calculateCHG(price, prevClose);
   const wick                                             = calculateWick(highs, lows, closes);
-  const bdr                                              = calculateBDR(volumes, closes, rvol);
+  const bdr                                              = calculateBDR(volumes, closes, rvol, rsi, wick);
   const pwr                                              = calculatePWR(rsi, macd, macdSig, rvol, chg, hist, goldenCross, deathCross);
   const fase                                             = calculateFASE(rsi, macd, macdSig, chg, wick, hist);
   const aksi                                             = calculateAKSI(rsi, macd, macdSig, rvol, chg, pwr, fase, goldenCross, deathCross, bdr.label, zone);

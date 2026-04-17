@@ -18,7 +18,9 @@ const WATCHLIST = [
   'PADI', 'PANI', 'PSKT', 'RAJA', 'SOFA',
   'TPIA', 'TRUE', 'VKTR', 'WIFI', 'ZATA',
   'KETR', 'KPIG', 'COIN', 'COCO', 'TAPG',
-  'BWPT', 'SUPA', 'WMUU', 'BBYB', 'BGTG',
+  'BWPT', 'SUPA', 'WMUU', 'BBYB', 'OASA',
+  'TRIN', 'EMAS', 'DOOH', 'KBLV', 'PBSA',
+  'KLAS', 'PNLF', 'PTRO', 'TOBA', 'SOCI',
 ];
 
 const HEADERS = {

@@ -17,6 +17,8 @@ const WATCHLIST = [
   'IMPC', 'MBMA', 'MINA', 'NINE', 'PADA',
   'PADI', 'PANI', 'PSKT', 'RAJA', 'SOFA',
   'TPIA', 'TRUE', 'VKTR', 'WIFI', 'ZATA',
+  'KETR', 'KPIG', 'COIN', 'COCO', 'TAPG',
+  'BWPT', 'SUPA', 'WMUU', 'BBYB', 'BGTG',
 ];
 
 const HEADERS = {

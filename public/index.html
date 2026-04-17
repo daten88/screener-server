@@ -7,7 +7,7 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:13px;background:#0a0a0a;color:#fff;padding:16px}
-.wrap{max-width:1300px;margin:0 auto}
+.wrap{max-width:1400px;margin:0 auto}
 .topbar{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap}
 .live-dot{width:8px;height:8px;border-radius:50%;background:#555;display:inline-block;margin-right:4px}
 .live-dot.on{background:#00ff88;animation:blink 1.4s infinite}
@@ -43,6 +43,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
 .fb-bo.on{background:#0a2a1a;color:#00ff88;border-color:#00ff88}
 .fb-rb.on{background:#0a1a2a;color:#00aaff;border-color:#00aaff}
 .fb-bd.on{background:#2a0a0a;color:#ff4444;border-color:#ff4444}
+.fb-gc.on{background:#1a1400;color:#ffd700;border-color:#ffd700}
+.fb-dc.on{background:#1a0000;color:#ff4444;border-color:#ff4444}
+.fb-bz.on{background:#001a0a;color:#00cc66;border-color:#00cc66}
+.fb-brz.on{background:#111;color:#666;border-color:#555}
 .sep{color:#333;font-size:12px}
 .add-bar{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;align-items:center}
 .add-bar input{font-size:12px;padding:6px 10px;border:1px solid #333;border-radius:8px;background:#111;color:#fff;width:140px;text-transform:uppercase;outline:none}
@@ -71,6 +75,14 @@ tr.sel td{background:#0a1a2a}
 .b-sw{background:#1a1a1a;color:#555}
 .b-bd{background:#2a0a0a;color:#ff4444}
 .b-ba{background:#2a1a00;color:#ffaa00}
+.b-dist{background:#2a0a0a;color:#ff4444;border:1px solid #ff4444}
+.b-dist-warn{background:#2a1500;color:#ff8800;border:1px solid #ff8800;animation:warnpulse 1.5s infinite}
+.b-golden{background:#1a1400;color:#ffd700;border:1px solid #ffd700}
+.b-death{background:#1a0000;color:#ff4444;border:1px solid #ff4444}
+.b-bullz{background:#001a0a;color:#00cc66;border:1px solid #00cc66}
+.b-bearz{background:#111;color:#555;border:1px solid #333}
+.b-zup{background:#001a10;color:#00ffaa;border:1px solid #00ffaa}
+.b-zdown{background:#1a0005;color:#ff6688;border:1px solid #ff6688}
 .pwr{display:inline-flex;gap:3px;align-items:center}
 .pd{width:7px;height:7px;border-radius:50%;background:#222}
 .pd.g{background:#00ff88}
@@ -81,10 +93,14 @@ tr.sel td{background:#0a1a2a}
 .rsi-fill{height:100%;border-radius:2px}
 .tp-v{color:#00ff88;font-weight:500;font-size:11px}
 .sl-v{color:#ff4444;font-weight:500;font-size:11px}
+.e1-v{color:#aaffcc;font-weight:500;font-size:11px}
+.e2-v{color:#88ffaa;font-weight:500;font-size:11px}
+.e3-v{color:#55ff88;font-weight:500;font-size:11px}
 .del{font-size:10px;padding:2px 6px;border-radius:4px;border:1px solid #333;background:transparent;color:#555;cursor:pointer}
 .del:hover{background:#2a0a0a;color:#ff4444}
 .spin{display:inline-block;width:10px;height:10px;border:2px solid #333;border-top-color:#00ff88;border-radius:50%;animation:spin .7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
+@keyframes warnpulse{0%,100%{opacity:1}50%{opacity:.5}}
 .chart-panel{background:#111;border-radius:10px;border:1px solid #222;overflow:hidden;margin-bottom:12px}
 .chart-hdr{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid #222;flex-wrap:wrap;gap:6px}
 .chart-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
@@ -93,25 +109,11 @@ tr.sel td{background:#0a1a2a}
 .tv-wrap iframe{width:100%;height:100%;border:none}
 .note{font-size:10px;color:#333;margin-top:10px;line-height:1.8}
 .err-t{font-size:11px;color:#ff4444}
-.b-dist{background:#2a0a0a;color:#ff4444;border:1px solid #ff4444}
-.b-dist-warn{background:#2a1500;color:#ff8800;border:1px solid #ff8800;animation:warnpulse 1.5s infinite}
-@keyframes warnpulse{0%,100%{opacity:1}50%{opacity:.5}}
-/* Golden / Death Cross & Zone badges */
-.b-golden{background:#1a1400;color:#ffd700;border:1px solid #ffd700}
-.b-death{background:#1a0000;color:#ff4444;border:1px solid #ff4444}
-.b-bullz{background:#001a0a;color:#00cc66;border:1px solid #00cc66}
-.b-bearz{background:#111;color:#555;border:1px solid #333}
-.b-zup{background:#001a10;color:#00ffaa;border:1px solid #00ffaa}
-.b-zdown{background:#1a0005;color:#ff6688;border:1px solid #ff6688}
-/* Filter cross buttons */
-.fb-gc.on{background:#1a1400;color:#ffd700;border-color:#ffd700}
-.fb-dc.on{background:#1a0000;color:#ff4444;border-color:#ff4444}
-.fb-bz.on{background:#001a0a;color:#00cc66;border-color:#00cc66}
-.fb-brz.on{background:#111;color:#666;border-color:#555}
 </style>
 </head>
 <body>
 <div class="wrap">
+
 <div class="topbar">
   <div style="display:flex;flex-direction:column;gap:4px">
     <span class="tbar-title">
@@ -124,19 +126,23 @@ tr.sel td{background:#0a1a2a}
   <span class="conn-badge loading" id="connBadge">Connecting...</span>
   <span class="tbar-right" id="lastUpdate">&mdash;</span>
 </div>
+
 <div class="prog"><div class="prog-fill" id="progFill" style="width:0%"></div></div>
+
 <div class="sum-grid">
   <div class="sc"><div class="sk">HAKA</div><div class="sv" id="cH" style="color:#00ff88">0</div></div>
   <div class="sc"><div class="sk">BUY</div><div class="sv" id="cB" style="color:#00aaff">0</div></div>
   <div class="sc"><div class="sk">HOLD</div><div class="sv" id="cHo" style="color:#ffaa00">0</div></div>
   <div class="sc"><div class="sk">SELL</div><div class="sv" id="cS" style="color:#ff4444">0</div></div>
 </div>
+
 <div class="mood-bar">
   <span class="mood-lbl">Mood Pasar</span>
   <span class="mood-val" id="moodVal">&mdash;</span>
   <span class="mood-sep">|</span>
   <span class="mood-stat" id="moodStat">Menunggu data...</span>
 </div>
+
 <div class="filter-row">
   <span class="filter-label">SINYAL</span>
   <button class="fb fb-all on" onclick="setFilter('aksi','ALL',this)">Semua</button>
@@ -156,12 +162,14 @@ tr.sel td{background:#0a1a2a}
   <button class="fb fb-bz" onclick="setFilter('cross','BULL_ZONE',this)">🔵 Bull Zone</button>
   <button class="fb fb-brz" onclick="setFilter('cross','BEAR_ZONE',this)">⚫ Bear Zone</button>
 </div>
+
 <div class="add-bar">
   <input id="addInp" type="text" placeholder="Tambah emiten..." maxlength="10"/>
   <button class="btn" onclick="addStock()">+ Tambah</button>
   <button class="btn" onclick="manualRefresh()">&#x21BB; Refresh</button>
   <span class="cd" id="cdTxt"></span>
 </div>
+
 <div class="tbl-outer">
 <table>
   <thead><tr>
@@ -176,20 +184,21 @@ tr.sel td{background:#0a1a2a}
     <th onclick="sortBy('pwr')">PWR</th>
     <th onclick="sortBy('fase')">FASE</th>
     <th onclick="sortBy('e1')">ENTRY 1</th>
-<th onclick="sortBy('e2')">ENTRY 2</th>
-<th onclick="sortBy('e3')">ENTRY 3</th>
-<th onclick="sortBy('tp')">TP</th>
-<th onclick="sortBy('sl')">SL</th>
-<th onclick="sortBy('aksi')">SINYAL</th>
-<th></th>
+    <th onclick="sortBy('e2')">ENTRY 2</th>
+    <th onclick="sortBy('e3')">ENTRY 3</th>
+    <th onclick="sortBy('tp')">TP</th>
+    <th onclick="sortBy('sl')">SL</th>
+    <th onclick="sortBy('aksi')">SINYAL</th>
+    <th></th>
   </tr></thead>
   <tbody id="tBody">
-    <tr><td colspan="13" style="text-align:center;padding:30px;color:#555">
+    <tr><td colspan="17" style="text-align:center;padding:30px;color:#555">
       <span class="spin"></span> Memuat data...
     </td></tr>
   </tbody>
 </table>
 </div>
+
 <div id="chartPanel" style="display:none" class="chart-panel">
   <div class="chart-hdr">
     <div class="chart-meta">
@@ -199,17 +208,22 @@ tr.sel td{background:#0a1a2a}
       <span id="cPwr"></span>
       <span id="cBdr"></span>
       <span id="cCross"></span>
-      <span id="cTpSl" style="font-size:11px"></span>
     </div>
     <button class="btn" onclick="closeChart()">Tutup Chart</button>
   </div>
+  <div style="padding:10px 14px;border-bottom:1px solid #222;display:flex;gap:16px;flex-wrap:wrap">
+    <span id="cEntry" style="font-size:11px"></span>
+    <span id="cTpSl" style="font-size:11px"></span>
+  </div>
   <div class="tv-wrap" id="tvWrap"></div>
 </div>
+
 <div class="note">
   Data update otomatis tiap 2 menit jam bursa. Klik baris untuk chart TradingView.<br>
   <strong>Bukan rekomendasi investasi. Selalu lakukan analisa mandiri.</strong>
 </div>
 </div>
+
 <script>
 var cache={}, sel=null, fType='aksi', fVal='ALL', sKey='aksi', sAsc=true;
 var cdInt=null, cdN=30;
@@ -284,8 +298,25 @@ function pwrDots(n,fase){
 }
 
 function rsiBar(rsi){
-  var col=rsi>70?'#ff4444':rsi>55?'#ffaa00':rsi<30?'#00aaff':'#00ff88';
-  return '<span class="rsi-wrap"><span class="rsi-bg"><span class="rsi-fill" style="width:'+rsi+'%;background:'+col+'"></span></span><span style="font-size:11px;color:#888">'+rsi+'</span></span>';
+  var col, label;
+  if(rsi<30){ col='#00aaff'; label='OVERSOLD'; }
+  else if(rsi<45){ col='#00ff88'; label='PULIH'; }
+  else if(rsi<55){ col='#aaaaaa'; label='NETRAL'; }
+  else if(rsi<70){ col='#ffdd00'; label='BULLISH'; }
+  else{ col='#ff4444'; label='OVERBOUGHT'; }
+  return '<span class="rsi-wrap">'
+    +'<span class="rsi-bg"><span class="rsi-fill" style="width:'+rsi+'%;background:'+col+'"></span></span>'
+    +'<span style="font-size:11px;color:'+col+';font-weight:500">'+rsi+'</span>'
+    +'</span>';
+}
+
+function crossBadge(golden,death,zone){
+  if(golden) return '<span class="badge b-golden">🟡 GOLDEN</span>';
+  if(death)  return '<span class="badge b-death">💀 DEATH</span>';
+  if(zone==='ZERO_CROSS_UP')   return '<span class="badge b-zup">⬆️ ZERO↑</span>';
+  if(zone==='ZERO_CROSS_DOWN') return '<span class="badge b-zdown">⬇️ ZERO↓</span>';
+  if(zone==='BULL_ZONE') return '<span class="badge b-bullz">🔵 BULL</span>';
+  return '<span class="badge b-bearz">⚫ BEAR</span>';
 }
 
 function fBadge(f){
@@ -293,16 +324,14 @@ function fBadge(f){
   return '<span class="badge '+(m[f]||'b-sw')+'">'+f+'</span>';
 }
 
-function bBadge(b, zone){
+function bBadge(b,zone){
   if(!b) return '<span style="color:#333;font-size:11px">&mdash;</span>';
-  // DIST + BULL ZONE = jebakan bull → warning berkedip
   if(b==='DIST'){
-    var isBullZone = zone==='BULL_ZONE'||zone==='ZERO_CROSS_UP';
-    if(isBullZone) return '<span class="badge b-dist-warn" title="⚠️ JEBAKAN BULL: Bandar distribusi saat trend bullish">⚠️ DIST!</span>';
+    var isBullZone=zone==='BULL_ZONE'||zone==='ZERO_CROSS_UP';
+    if(isBullZone) return '<span class="badge b-dist-warn" title="JEBAKAN BULL: Bandar distribusi saat trend bullish">⚠️ DIST!</span>';
     return '<span class="badge b-dist">DIST</span>';
   }
-  // AKUM? = akumulasi terselubung, belum terkonfirmasi penuh
-  if(b==='AKUM?') return '<span class="badge" style="background:#001a1a;color:#00cccc;border:1px solid #00cccc" title="Potensi akumulasi terselubung — bandar tekan harga untuk kumpul, belum konfirmasi penuh">🔍 AKUM?</span>';
+  if(b==='AKUM?') return '<span class="badge" style="background:#001a1a;color:#00cccc;border:1px solid #00cccc" title="Potensi akumulasi terselubung">🔍 AKUM?</span>';
   var m={'BIG ACC':'b-bo','AKUM':'b-ba'};
   return '<span class="badge '+(m[b]||'b-sw')+'">'+b+'</span>';
 }
@@ -319,15 +348,6 @@ function setFilter(type,val,btn){
   renderTable();
 }
 
-function crossBadge(golden,death,zone){
-  if(golden) return '<span class="badge b-golden">🟡 GOLDEN</span>';
-  if(death)  return '<span class="badge b-death">💀 DEATH</span>';
-  if(zone==='ZERO_CROSS_UP')   return '<span class="badge b-zup">⬆️ ZERO↑</span>';
-  if(zone==='ZERO_CROSS_DOWN') return '<span class="badge b-zdown">⬇️ ZERO↓</span>';
-  if(zone==='BULL_ZONE') return '<span class="badge b-bullz">🔵 BULL</span>';
-  return '<span class="badge b-bearz">⚫ BEAR</span>';
-}
-
 function sortBy(k){
   if(sKey===k) sAsc=!sAsc;
   else{ sKey=k; sAsc=true; }
@@ -339,8 +359,8 @@ function getSV(d){
   if(sKey==='aksi') return AO[d.aksi]!=null?AO[d.aksi]:2;
   if(sKey==='fase') return FO[d.fase]!=null?FO[d.fase]:2;
   if(sKey==='bdr'){
-    var bo={'BIG ACC':0,'AKUM':1,'':2,'DIST':3};
-    return bo[d.bdr]!=null?bo[d.bdr]:2;
+    var bo={'BIG ACC':0,'AKUM':1,'AKUM?':2,'':3,'DIST':4};
+    return bo[d.bdr]!=null?bo[d.bdr]:3;
   }
   if(sKey==='zone'){
     var zo={'ZERO_CROSS_UP':0,'BULL_ZONE':1,'ZERO_CROSS_DOWN':2,'BEAR_ZONE':3};
@@ -357,12 +377,17 @@ function updateMood(){
   var rb=ld.filter(function(d){ return d.fase==='REBOUND'; }).length;
   var bd=ld.filter(function(d){ return d.fase==='BREAKDOWN'; }).length;
   var sw=ld.filter(function(d){ return d.fase==='SIDEWAYS'; }).length;
+  var gc=ld.filter(function(d){ return d.goldenCross; }).length;
+  var dc=ld.filter(function(d){ return d.deathCross; }).length;
   var pct=Math.round((bo+rb)/ld.length*100);
   var mood=pct>=60?'BULLISH':pct<=35?'BEARISH':'MIXED';
   var col=pct>=60?'#00ff88':pct<=35?'#ff4444':'#ffaa00';
   document.getElementById('moodVal').style.color=col;
   document.getElementById('moodVal').textContent=mood;
-  document.getElementById('moodStat').textContent=bo+' Breakout · '+rb+' Rebound · '+bd+' Breakdown · '+sw+' Sideways';
+  var stat=bo+' Breakout · '+rb+' Rebound · '+bd+' Breakdown · '+sw+' Sideways';
+  if(gc) stat+=' · <span style="color:#ffd700;font-weight:600">'+gc+' Golden Cross</span>';
+  if(dc) stat+=' · <span style="color:#ff4444;font-weight:600">'+dc+' Death Cross</span>';
+  document.getElementById('moodStat').innerHTML=stat;
 }
 
 function renderTable(){
@@ -381,7 +406,7 @@ function renderTable(){
     var d=cache[t];
     if(!d||!d.ok){
       if(fVal!=='ALL') return null;
-      return{t:t,sv:9999,html:'<tr class="dr"><td class="em">'+t+'</td><td colspan="11" class="err-t">'+(d?d.error:'...')+'</td><td><button class="del" onclick="delRow(\''+t+'\')">x</button></td></tr>'};
+      return{t:t,sv:9999,html:'<tr class="dr"><td class="em">'+t+'</td><td colspan="15" class="err-t">'+(d?d.error:'...')+'</td><td><button class="del" onclick="delRow(\''+t+'\')">x</button></td></tr>'};
     }
     if(fType==='aksi'&&fVal!=='ALL'&&d.aksi!==fVal) return null;
     if(fType==='fase'&&d.fase!==fVal) return null;
@@ -393,8 +418,13 @@ function renderTable(){
     }
 
     var cc=d.chg>=0?'gp':'gn';
-    var mc=d.macd>d.macdSig?'#00ff88':'#ff4444';
-    var rc=d.rvol>1.5?'#00ff88':d.rvol>1.2?'#ffaa00':'#555';
+    var mc=d.macd>=0?'#00ff88':'#ff4444';
+    var rc;
+    if(d.rvol>=2.0)      rc='#ff4444';
+    else if(d.rvol>=1.5) rc='#00ff88';
+    else if(d.rvol>=1.0) rc='#ffdd00';
+    else if(d.rvol>=0.6) rc='#aaaaaa';
+    else                 rc='#444444';
     var selCls=sel===t?' sel':'';
 
     var row='<tr class="dr'+selCls+'" onclick="rowClick(\''+t+'\')">'
@@ -408,11 +438,11 @@ function renderTable(){
       +'<td>'+bBadge(d.bdr,d.zone)+'</td>'
       +'<td>'+pwrDots(d.pwr,d.fase)+'</td>'
       +'<td>'+fBadge(d.fase)+'</td>'
-      +'<td><span style="color:#aaffcc;font-size:11px;font-weight:500">'+(d.e1?d.e1.toLocaleString('id-ID'):'&mdash;')+'</span></td>'
-+'<td><span style="color:#88ffaa;font-size:11px;font-weight:500">'+(d.e2?d.e2.toLocaleString('id-ID'):'&mdash;')+'</span></td>'
-+'<td><span style="color:#55ff88;font-size:11px;font-weight:500">'+(d.e3?d.e3.toLocaleString('id-ID'):'&mdash;')+'</span></td>'
-+'<td><span class="tp-v">'+(d.tp?d.tp.toLocaleString('id-ID'):'&mdash;')+'</span></td>'
-+'<td><span class="sl-v">'+(d.sl?d.sl.toLocaleString('id-ID'):'&mdash;')+'</span></td>'
+      +'<td><span class="e1-v">'+(d.e1?d.e1.toLocaleString('id-ID'):'&mdash;')+'</span></td>'
+      +'<td><span class="e2-v">'+(d.e2?d.e2.toLocaleString('id-ID'):'&mdash;')+'</span></td>'
+      +'<td><span class="e3-v">'+(d.e3?d.e3.toLocaleString('id-ID'):'&mdash;')+'</span></td>'
+      +'<td><span class="tp-v">'+(d.tp?d.tp.toLocaleString('id-ID'):'&mdash;')+'</span></td>'
+      +'<td><span class="sl-v">'+(d.sl?d.sl.toLocaleString('id-ID'):'&mdash;')+'</span></td>'
       +'<td>'+aBadge(d.aksi)+'</td>'
       +'<td><button class="del" onclick="event.stopPropagation();delRow(\''+t+'\')">x</button></td>'
       +'</tr>';
@@ -453,18 +483,19 @@ function showChart(t){
   document.getElementById('cBdr').innerHTML=d&&d.ok?bBadge(d.bdr,d.zone):'';
   document.getElementById('cCross').innerHTML=d&&d.ok?crossBadge(d.goldenCross,d.deathCross,d.zone):'';
   if(d&&d.ok){
+    document.getElementById('cEntry').innerHTML=
+      '<span class="e1-v">E1 '+(d.e1?d.e1.toLocaleString('id-ID'):'&mdash;')+'</span> &nbsp; '
+      +'<span class="e2-v">E2 '+(d.e2?d.e2.toLocaleString('id-ID'):'&mdash;')+'</span> &nbsp; '
+      +'<span class="e3-v">E3 '+(d.e3?d.e3.toLocaleString('id-ID'):'&mdash;')+'</span>';
     document.getElementById('cTpSl').innerHTML=
-      '<span style="color:#aaffcc;font-weight:500">E1 '+(d.e1?d.e1.toLocaleString('id-ID'):'&mdash;')+'</span> &nbsp; '+
-      '<span style="color:#88ffaa;font-weight:500">E2 '+(d.e2?d.e2.toLocaleString('id-ID'):'&mdash;')+'</span> &nbsp; '+
-      '<span style="color:#55ff88;font-weight:500">E3 '+(d.e3?d.e3.toLocaleString('id-ID'):'&mdash;')+'</span> &nbsp; '+
-      '<span class="tp-v">TP '+(d.tp||0).toLocaleString('id-ID')+'</span> &nbsp; '+
-      '<span class="sl-v">SL '+(d.sl||0).toLocaleString('id-ID')+'</span>';
+      '<span class="tp-v">TP '+(d.tp?d.tp.toLocaleString('id-ID'):'&mdash;')+'</span> &nbsp; '
+      +'<span class="sl-v">SL '+(d.sl?d.sl.toLocaleString('id-ID'):'&mdash;')+'</span>';
   }
-  var tvUrl='https://s.tradingview.com/widgetembed/?frameElementId=tv_'+t+
-    '&symbol=IDX%3A'+t+
-    '&interval=D&hidesidetoolbar=0&saveimage=0'+
-    '&studies=RSI%40tv-basicstudies%1FMACD%40tv-basicstudies%1FVolume%40tv-basicstudies'+
-    '&theme=dark&style=1&timezone=Asia%2FJakarta&withdateranges=1&locale=id';
+  var tvUrl='https://s.tradingview.com/widgetembed/?frameElementId=tv_'+t
+    +'&symbol=IDX%3A'+t
+    +'&interval=D&hidesidetoolbar=0&saveimage=0'
+    +'&studies=RSI%40tv-basicstudies%1FMACD%40tv-basicstudies%1FVolume%40tv-basicstudies'
+    +'&theme=dark&style=1&timezone=Asia%2FJakarta&withdateranges=1&locale=id';
   document.getElementById('tvWrap').innerHTML='<iframe src="'+tvUrl+'" allowtransparency="true" frameborder="0" scrolling="no"></iframe>';
   var panel=document.getElementById('chartPanel');
   panel.style.display='block';

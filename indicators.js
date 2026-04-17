@@ -1,3 +1,19 @@
+# Ketemu! Error di indicators.js Baris 253
+
+```
+SyntaxError: Unexpected end of input
+/app/indicators.js:253
+```
+
+Artinya file `indicators.js` di GitHub **terpotong di baris 253** - tidak lengkap sampai akhir!
+
+---
+
+## ✅ Solusi - Upload indicators.js Lengkap
+
+Buka GitHub → klik `indicators.js` → klik pensil → **hapus semua** → paste ini:
+
+```javascript
 const TI = require('technicalindicators');
 
 function avg(arr) {
@@ -212,31 +228,24 @@ function calculateAKSI(rsi, macd, macdSig, rvol, chg, pwr, fase, goldenCross, de
   const bullZone = zone === 'BULL_ZONE' || zone === 'ZERO_CROSS_UP';
   const bearZone = zone === 'BEAR_ZONE' || zone === 'ZERO_CROSS_DOWN';
 
-  // SELL prioritas tertinggi
-  if (deathCross)                    return 'SELL';
-  if (bdr === 'DIST' && !bull)       return 'SELL';
-  if (rsi > 70 && !bull)             return 'SELL';
-  if (fase === 'BREAKDOWN')          return 'SELL';
-  if (pwr <= 2 && !bull && rsi > 60) return 'SELL';
-
-  // Proteksi DIST di bull zone
+  if (deathCross)                              return 'SELL';
+  if (bdr === 'DIST' && !bull)                 return 'SELL';
+  if (rsi > 70 && !bull)                       return 'SELL';
+  if (fase === 'BREAKDOWN')                    return 'SELL';
+  if (pwr <= 2 && !bull && rsi > 60)           return 'SELL';
   if (bdr === 'DIST' && bullZone)              return 'HOLD';
   if (goldenCross && bearZone && bdr === 'DIST') return 'SELL';
 
-  // Golden Cross
   if (goldenCross && bull && rvol > 1.0) {
     return bearZone ? 'BUY' : 'HAKA';
   }
 
-  // AKUM terselubung terkonfirmasi
   if (bdr === 'AKUM' && bull && rsi < 45 && fase !== 'BREAKDOWN') return 'BUY';
 
-  // HAKA normal
   if (pwr >= 4 && bull && (fase === 'BREAKOUT' || fase === 'REBOUND') && rvol > 1.3) {
     return bullZone ? 'HAKA' : 'BUY';
   }
 
-  // BUY standar
   if (pwr >= 3 && bull && fase !== 'BREAKDOWN') {
     return bearZone ? 'HOLD' : 'BUY';
   }

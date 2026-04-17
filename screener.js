@@ -30,7 +30,6 @@ const HEADERS = {
   'Pragma': 'no-cache'
 };
 
-// Daftar URL untuk dicoba bergantian
 function getUrls(symbol) {
   return [
     `https://query2.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=3mo`,
@@ -54,7 +53,6 @@ async function fetchData(ticker) {
         timeout: 15000
       });
 
-      // Handle v8 response
       if (urls[i].includes('/v8/') || urls[i].includes('/v7/finance/chart')) {
         const chart = res.data.chart?.result?.[0];
         if (!chart) continue;
@@ -90,37 +88,45 @@ async function screenStock(ticker) {
 
   const { closes, highs, lows, volumes, price, prevClose } = data;
 
-  const rsi                            = calculateRSI(closes);
-  const { macd, signal: macdSig, hist} = calculateMACD(closes);
-  const rvol                           = calculateRVOL(volumes);
-  const atr                            = calculateATR(highs, lows, closes);
-  const chg                            = calculateCHG(price, prevClose);
-  const wick                           = calculateWick(highs, lows, closes);
-  const bdr                            = calculateBDR(volumes, closes, rvol);
-  const pwr                            = calculatePWR(rsi, macd, macdSig, rvol, chg, hist);
-  const fase                           = calculateFASE(rsi, macd, macdSig, chg, wick, hist);
-  const aksi                           = calculateAKSI(rsi, macd, macdSig, rvol, chg, pwr, fase);
-  const { tp, sl }                     = calculateTPSL(price, atr, fase, aksi, highs, lows);
-  const { e1, e2, e3 }                 = calculateEntry(price, atr, fase, aksi, highs, lows);
+  const rsi                                        = calculateRSI(closes);
+  const { macd, signal: macdSig, hist,
+          goldenCross, deathCross }                 = calculateMACD(closes);
+  const rvol                                       = calculateRVOL(volumes);
+  const atr                                        = calculateATR(highs, lows, closes);
+  const chg                                        = calculateCHG(price, prevClose);
+  const wick                                       = calculateWick(highs, lows, closes);
+  const bdr                                        = calculateBDR(volumes, closes, rvol);
+  const pwr                                        = calculatePWR(rsi, macd, macdSig, rvol, chg, hist, goldenCross, deathCross);
+  const fase                                       = calculateFASE(rsi, macd, macdSig, chg, wick, hist);
+  const aksi                                       = calculateAKSI(rsi, macd, macdSig, rvol, chg, pwr, fase, goldenCross, deathCross, bdr.label);
+  const { tp, sl }                                 = calculateTPSL(price, atr, fase, aksi, highs, lows);
+  const { e1, e2, e3 }                             = calculateEntry(price, atr, fase, aksi, highs, lows);
 
   const rsiSig       = getRSISignal(rsi);
   const macdSigLabel = getMACDSignal(macd, macdSig);
   const rvolSig      = getRVOLSignal(rvol);
 
+  // Label MACD dengan Golden/Death Cross
+  let macdLabel = macdSigLabel.label;
+  if (goldenCross) macdLabel = 'GOLDEN CROSS';
+  if (deathCross)  macdLabel = 'DEATH CROSS';
+
   return {
     ticker,
-    ok:        true,
-    price:     Math.round(price),
+    ok:          true,
+    price:       Math.round(price),
     chg,
     rsi,
-    rsiLabel:  rsiSig.label,
+    rsiLabel:    rsiSig.label,
     macd,
     macdSig,
     hist,
-    macdLabel: macdSigLabel.label,
+    macdLabel,
+    goldenCross,
+    deathCross,
     rvol,
-    rvolLabel: rvolSig.label,
-    bdr:       bdr.label,
+    rvolLabel:   rvolSig.label,
+    bdr:         bdr.label,
     pwr,
     fase,
     aksi,

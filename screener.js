@@ -1,12 +1,12 @@
 const axios = require('axios');
 const {
-  calculateRSI,  getRSISignal,
-  calculateMACD, getMACDSignal,
-  calculateRVOL, getRVOLSignal,
-  calculateATR,  calculateCHG,
-  calculateWick, calculateBDR,
-  calculatePWR,  calculateFASE,
-  calculateAKSI, calculateTPSL,
+  calculateRSI,    getRSISignal,
+  calculateMACD,   getMACDSignal,  getZoneLabel,
+  calculateRVOL,   getRVOLSignal,
+  calculateATR,    calculateCHG,
+  calculateWick,   calculateBDR,
+  calculatePWR,    calculateFASE,
+  calculateAKSI,   calculateTPSL,
   calculateEntry
 } = require('./indicators');
 
@@ -88,28 +88,25 @@ async function screenStock(ticker) {
 
   const { closes, highs, lows, volumes, price, prevClose } = data;
 
-  const rsi                                        = calculateRSI(closes);
+  const rsi                                              = calculateRSI(closes);
   const { macd, signal: macdSig, hist,
-          goldenCross, deathCross }                 = calculateMACD(closes);
-  const rvol                                       = calculateRVOL(volumes);
-  const atr                                        = calculateATR(highs, lows, closes);
-  const chg                                        = calculateCHG(price, prevClose);
-  const wick                                       = calculateWick(highs, lows, closes);
-  const bdr                                        = calculateBDR(volumes, closes, rvol);
-  const pwr                                        = calculatePWR(rsi, macd, macdSig, rvol, chg, hist, goldenCross, deathCross);
-  const fase                                       = calculateFASE(rsi, macd, macdSig, chg, wick, hist);
-  const aksi                                       = calculateAKSI(rsi, macd, macdSig, rvol, chg, pwr, fase, goldenCross, deathCross, bdr.label);
-  const { tp, sl }                                 = calculateTPSL(price, atr, fase, aksi, highs, lows);
-  const { e1, e2, e3 }                             = calculateEntry(price, atr, fase, aksi, highs, lows);
+          macdPrev, signalPrev,
+          goldenCross, deathCross, zone }                = calculateMACD(closes);
+  const rvol                                             = calculateRVOL(volumes);
+  const atr                                              = calculateATR(highs, lows, closes);
+  const chg                                              = calculateCHG(price, prevClose);
+  const wick                                             = calculateWick(highs, lows, closes);
+  const bdr                                              = calculateBDR(volumes, closes, rvol);
+  const pwr                                              = calculatePWR(rsi, macd, macdSig, rvol, chg, hist, goldenCross, deathCross);
+  const fase                                             = calculateFASE(rsi, macd, macdSig, chg, wick, hist);
+  const aksi                                             = calculateAKSI(rsi, macd, macdSig, rvol, chg, pwr, fase, goldenCross, deathCross, bdr.label, zone);
+  const { tp, sl }                                       = calculateTPSL(price, atr, fase, aksi, highs, lows);
+  const { e1, e2, e3 }                                   = calculateEntry(price, atr, fase, aksi, highs, lows);
 
   const rsiSig       = getRSISignal(rsi);
-  const macdSigLabel = getMACDSignal(macd, macdSig);
+  const macdSigLabel = getMACDSignal(macd, macdSig, goldenCross, deathCross);
   const rvolSig      = getRVOLSignal(rvol);
-
-  // Label MACD dengan Golden/Death Cross
-  let macdLabel = macdSigLabel.label;
-  if (goldenCross) macdLabel = 'GOLDEN CROSS';
-  if (deathCross)  macdLabel = 'DEATH CROSS';
+  const zoneLabel    = getZoneLabel(zone);
 
   return {
     ticker,
@@ -121,9 +118,11 @@ async function screenStock(ticker) {
     macd,
     macdSig,
     hist,
-    macdLabel,
+    macdLabel:   macdSigLabel.label,
     goldenCross,
     deathCross,
+    zone,
+    zoneLabel,
     rvol,
     rvolLabel:   rvolSig.label,
     bdr:         bdr.label,
@@ -140,9 +139,9 @@ async function screenStock(ticker) {
 
 async function runScreener() {
   const now = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
-  console.log('\n' + '='.repeat(50));
+  console.log('\n' + '='.repeat(70));
   console.log('SCREENER SAHAM IDX - ' + now);
-  console.log('='.repeat(50));
+  console.log('='.repeat(70));
 
   const results = {};
   for (const ticker of WATCHLIST) {
@@ -152,7 +151,82 @@ async function runScreener() {
   }
 
   const sukses = Object.values(results).filter(r => r.ok).length;
-  console.log(`\nScan selesai - ${sukses}/${WATCHLIST.length} saham berhasil`);
+  console.log(`\nScan selesai - ${sukses}/${WATCHLIST.length} saham berhasil\n`);
+
+  // ── Summary: Sinyal HAKA / BUY terkonfirmasi ────────────────────────
+  console.log('─'.repeat(70));
+  console.log('🟢 SINYAL BELI TERKONFIRMASI (Golden Cross / Bull Zone):');
+  console.log('─'.repeat(70));
+
+  const beliBull = Object.values(results).filter(r =>
+    r.ok &&
+    (r.aksi === 'HAKA' || r.aksi === 'BUY') &&
+    (r.goldenCross || r.zone === 'BULL_ZONE' || r.zone === 'ZERO_CROSS_UP')
+  );
+
+  if (!beliBull.length) {
+    console.log('  Tidak ada sinyal beli terkonfirmasi.');
+  } else {
+    beliBull.forEach(r => {
+      const cross = r.goldenCross ? '🟡 GOLDEN CROSS' : r.zoneLabel;
+      console.log(
+        `  ${r.ticker.padEnd(6)} | ${r.aksi.padEnd(4)} | ${r.fase.padEnd(9)} | ` +
+        `${cross.padEnd(22)} | PWR:${r.pwr} | RVOL:${r.rvol} | ` +
+        `Harga:${r.price} | TP:${r.tp} | SL:${r.sl}`
+      );
+    });
+  }
+
+  // ── Summary: Sinyal SELL terkonfirmasi ──────────────────────────────
+  console.log('\n' + '─'.repeat(70));
+  console.log('🔴 SINYAL JUAL TERKONFIRMASI (Death Cross / Bear Zone):');
+  console.log('─'.repeat(70));
+
+  const jualBear = Object.values(results).filter(r =>
+    r.ok &&
+    r.aksi === 'SELL' &&
+    (r.deathCross || r.zone === 'BEAR_ZONE' || r.zone === 'ZERO_CROSS_DOWN')
+  );
+
+  if (!jualBear.length) {
+    console.log('  Tidak ada sinyal jual terkonfirmasi.');
+  } else {
+    jualBear.forEach(r => {
+      const cross = r.deathCross ? '💀 DEATH CROSS' : r.zoneLabel;
+      console.log(
+        `  ${r.ticker.padEnd(6)} | ${r.aksi.padEnd(4)} | ${r.fase.padEnd(9)} | ` +
+        `${cross.padEnd(22)} | PWR:${r.pwr} | RVOL:${r.rvol} | ` +
+        `Harga:${r.price} | TP:${r.tp} | SL:${r.sl}`
+      );
+    });
+  }
+
+  // ── Summary: Sinyal ambigu (BUY tapi Bear Zone, atau SELL tapi Bull Zone) ──
+  console.log('\n' + '─'.repeat(70));
+  console.log('⚠️  SINYAL AMBIGU (arah sinyal vs zone berlawanan):');
+  console.log('─'.repeat(70));
+
+  const ambigu = Object.values(results).filter(r => {
+    if (!r.ok) return false;
+    const beliTapiBeZone = (r.aksi === 'BUY' || r.aksi === 'HAKA') &&
+                           (r.zone === 'BEAR_ZONE' || r.zone === 'ZERO_CROSS_DOWN');
+    const jualTapiBullZone = r.aksi === 'SELL' &&
+                             (r.zone === 'BULL_ZONE' || r.zone === 'ZERO_CROSS_UP');
+    return beliTapiBeZone || jualTapiBullZone;
+  });
+
+  if (!ambigu.length) {
+    console.log('  Tidak ada sinyal ambigu.');
+  } else {
+    ambigu.forEach(r => {
+      console.log(
+        `  ${r.ticker.padEnd(6)} | ${r.aksi.padEnd(4)} | ${r.fase.padEnd(9)} | ` +
+        `${r.zoneLabel.padEnd(22)} | PWR:${r.pwr} | RVOL:${r.rvol} | Harga:${r.price}`
+      );
+    });
+  }
+
+  console.log('\n' + '='.repeat(70));
   return results;
 }
 

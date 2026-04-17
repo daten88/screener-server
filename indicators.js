@@ -30,49 +30,29 @@ function calculateMACD(closes) {
       SimpleMAOscillator: false,
       SimpleMASignal: false
     });
-
     if (!result.length) return {
       macd: 0, signal: 0, hist: 0,
       macdPrev: 0, signalPrev: 0,
       goldenCross: false, deathCross: false,
       zone: 'BEAR_ZONE'
     };
-
     const last = result[result.length - 1];
     const prev = result.length >= 2 ? result[result.length - 2] : last;
-
     const macdNow  = parseFloat((last.MACD      ?? 0).toFixed(2));
     const sigNow   = parseFloat((last.signal    ?? 0).toFixed(2));
     const histNow  = parseFloat((last.histogram ?? 0).toFixed(2));
     const macdPrev = parseFloat((prev.MACD      ?? 0).toFixed(2));
     const sigPrev  = parseFloat((prev.signal    ?? 0).toFixed(2));
-
     const goldenCross = macdPrev < sigPrev && macdNow > sigNow;
     const deathCross  = macdPrev > sigPrev && macdNow < sigNow;
-
     let zone;
     if      (macdPrev < 0 && macdNow >= 0) zone = 'ZERO_CROSS_UP';
     else if (macdPrev > 0 && macdNow <= 0) zone = 'ZERO_CROSS_DOWN';
     else if (macdNow > 0)                  zone = 'BULL_ZONE';
     else                                   zone = 'BEAR_ZONE';
-
-    return {
-      macd:        macdNow,
-      signal:      sigNow,
-      hist:        histNow,
-      macdPrev,
-      signalPrev:  sigPrev,
-      goldenCross,
-      deathCross,
-      zone
-    };
+    return { macd: macdNow, signal: sigNow, hist: histNow, macdPrev, signalPrev: sigPrev, goldenCross, deathCross, zone };
   } catch {
-    return {
-      macd: 0, signal: 0, hist: 0,
-      macdPrev: 0, signalPrev: 0,
-      goldenCross: false, deathCross: false,
-      zone: 'BEAR_ZONE'
-    };
+    return { macd: 0, signal: 0, hist: 0, macdPrev: 0, signalPrev: 0, goldenCross: false, deathCross: false, zone: 'BEAR_ZONE' };
   }
 }
 
@@ -137,10 +117,7 @@ function calculateBDR(volumes, closes, rvol, rsi, wick) {
   const n    = 20;
   const rv   = volumes.slice(-n);
   const avgV = avg(rv);
-
-  let bigUp   = 0;
-  let bigDown = 0;
-
+  let bigUp = 0, bigDown = 0;
   for (let i = 1; i < rv.length; i++) {
     const volBesar   = rv[i] > avgV * 1.5;
     const hargaNaik  = closes[closes.length - n + i] >  closes[closes.length - n + i - 1];
@@ -148,51 +125,37 @@ function calculateBDR(volumes, closes, rvol, rsi, wick) {
     if (volBesar && hargaNaik)  bigUp++;
     if (volBesar && hargaTurun) bigDown++;
   }
-
   const c1 = closes[closes.length - 1];
   const c2 = closes[closes.length - 2];
   const c3 = closes[closes.length - 3];
-
   if (rvol > 2   && bigUp >= 4 && c1 >= c2 && c2 >= c3) return { label: 'BIG ACC', score: 3 };
   if (rvol > 1.4 && bigUp >= 2)                          return { label: 'AKUM',    score: 2 };
-
   if (rvol > 1.5 && bigDown >= 2 && c1 < c2 && rsi < 40) {
     if (wick > 25) return { label: 'AKUM',  score: 2 };
     return           { label: 'AKUM?', score: 1 };
   }
-
-  if (rvol > 1.5 && bigDown >= 2 && c1 < c2 && rsi < 45 && wick > 30) {
-    return { label: 'AKUM?', score: 1 };
-  }
-
+  if (rvol > 1.5 && bigDown >= 2 && c1 < c2 && rsi < 45 && wick > 30) return { label: 'AKUM?', score: 1 };
   if (rvol > 1.5 && bigDown >= 3 && c1 < c2 && rsi > 55) return { label: 'DIST', score: -2 };
   if (rvol > 1.2 && bigDown >= 2 && c1 < c2 && c2 < c3 && rsi > 50) return { label: 'DIST', score: -2 };
-
   return { label: '', score: 0 };
 }
 
 function calculatePWR(rsi, macd, macdSig, rvol, chg, hist, goldenCross, deathCross) {
   let s = 0;
-
   if (rsi < 30)        s += 2;
   else if (rsi < 45)   s += 1;
   else if (rsi > 75)   s -= 2;
   else if (rsi > 65)   s -= 1;
-
   if (macd > macdSig)  s += 1;
   if (hist > 0)        s += 1;
-
   if (rvol > 2.5)      s += 2;
   else if (rvol > 1.5) s += 1;
   else if (rvol < 0.6) s -= 1;
-
   if (chg > 3)         s += 1;
   else if (chg < -4)   s -= 2;
   else if (chg < -2)   s -= 1;
-
   if (goldenCross)     s += 2;
   if (deathCross)      s -= 2;
-
   return Math.min(5, Math.max(1, s));
 }
 
@@ -211,29 +174,17 @@ function calculateAKSI(rsi, macd, macdSig, rvol, chg, pwr, fase, goldenCross, de
   const bull     = macd > macdSig;
   const bullZone = zone === 'BULL_ZONE' || zone === 'ZERO_CROSS_UP';
   const bearZone = zone === 'BEAR_ZONE' || zone === 'ZERO_CROSS_DOWN';
-
-  if (deathCross)                              return 'SELL';
-  if (bdr === 'DIST' && !bull)                 return 'SELL';
-  if (rsi > 70 && !bull)                       return 'SELL';
-  if (fase === 'BREAKDOWN')                    return 'SELL';
-  if (pwr <= 2 && !bull && rsi > 60)           return 'SELL';
-  if (bdr === 'DIST' && bullZone)              return 'HOLD';
+  if (deathCross)                                return 'SELL';
+  if (bdr === 'DIST' && !bull)                   return 'SELL';
+  if (rsi > 70 && !bull)                         return 'SELL';
+  if (fase === 'BREAKDOWN')                      return 'SELL';
+  if (pwr <= 2 && !bull && rsi > 60)             return 'SELL';
+  if (bdr === 'DIST' && bullZone)                return 'HOLD';
   if (goldenCross && bearZone && bdr === 'DIST') return 'SELL';
-
-  if (goldenCross && bull && rvol > 1.0) {
-    return bearZone ? 'BUY' : 'HAKA';
-  }
-
+  if (goldenCross && bull && rvol > 1.0)         return bearZone ? 'BUY' : 'HAKA';
   if (bdr === 'AKUM' && bull && rsi < 45 && fase !== 'BREAKDOWN') return 'BUY';
-
-  if (pwr >= 4 && bull && (fase === 'BREAKOUT' || fase === 'REBOUND') && rvol > 1.3) {
-    return bullZone ? 'HAKA' : 'BUY';
-  }
-
-  if (pwr >= 3 && bull && fase !== 'BREAKDOWN') {
-    return bearZone ? 'HOLD' : 'BUY';
-  }
-
+  if (pwr >= 4 && bull && (fase === 'BREAKOUT' || fase === 'REBOUND') && rvol > 1.3) return bullZone ? 'HAKA' : 'BUY';
+  if (pwr >= 3 && bull && fase !== 'BREAKDOWN')  return bearZone ? 'HOLD' : 'BUY';
   return 'HOLD';
 }
 
@@ -254,7 +205,6 @@ function calculateTPSL(price, atr, fase, aksi, highs, lows) {
   const support = Math.min(...lows.slice(-10));
   const fraksi  = getFraksi(price);
   let tp, sl;
-
   if (aksi === 'SELL') {
     tp = roundToFraksi(price - atr * 1.5, fraksi);
     sl = roundToFraksi(price + atr * 1.0, fraksi);
@@ -265,7 +215,6 @@ function calculateTPSL(price, atr, fase, aksi, highs, lows) {
     if (tp <= price) tp = roundToFraksi(price + atr * 1.5, fraksi);
     if (sl >= price) sl = roundToFraksi(price - atr * 0.8, fraksi);
   }
-
   return { tp, sl };
 }
 
@@ -273,11 +222,7 @@ function calculateEntry(price, atr, fase, aksi, highs, lows) {
   const fraksi  = getFraksi(price);
   const support = Math.min(...lows.slice(-10));
   let e1, e2, e3;
-
-  if (aksi === 'SELL') {
-    return { e1: null, e2: null, e3: null };
-  }
-
+  if (aksi === 'SELL') return { e1: null, e2: null, e3: null };
   if (fase === 'BREAKOUT') {
     e1 = roundToFraksi(price, fraksi);
     e2 = roundToFraksi(price - atr * 0.3, fraksi);
@@ -285,17 +230,15 @@ function calculateEntry(price, atr, fase, aksi, highs, lows) {
   } else if (fase === 'REBOUND') {
     e1 = roundToFraksi(price, fraksi);
     e2 = roundToFraksi(price - atr * 0.5, fraksi);
-    e3 = roundToFraksi(Math.max(support * 1.01, price - atr * 1.0), fraksi);
+    e3 = roundToFraksi(Math    support * 1.01, price - atr * 1.0), fraksi);
   } else {
     e1 = roundToFraksi(price, fraksi);
     e2 = roundToFraksi(price - atr * 0.4, fraksi);
     e3 = roundToFraksi(price - atr * 0.8, fraksi);
   }
-
   const sl = roundToFraksi(Math.max(price - atr * 1.0, support * 0.99), fraksi);
   if (e3 <= sl) e3 = roundToFraksi(sl + fraksi * 2, fraksi);
   if (e2 <= sl) e2 = roundToFraksi(sl + fraksi * 4, fraksi);
-
   return { e1, e2, e3 };
 }
 

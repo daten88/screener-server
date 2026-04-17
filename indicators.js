@@ -152,21 +152,72 @@ function calculateWick(highs, lows, closes) {
 }
 
 // ===== BDR =====
-function calculateBDR(volumes, closes, rvol) {
+// Deteksi pola akumulasi / distribusi bandar
+//
+// Logika utama:
+//   Volume besar + harga naik  → AKUMULASI (bandar beli, harga didorong naik)
+//   Volume besar + harga turun → AMBIGU:
+//     - Jika RSI tinggi (> 55) + harga sudah di atas → DISTRIBUSI (bandar jual ke retail)
+//     - Jika RSI rendah (< 40) + dekat support      → AKUM TERSELUBUNG (bandar tekan harga untuk kumpul)
+//     - Jika RSI 40–55                              → tidak bisa disimpulkan dari volume saja
+//
+// Parameter tambahan:
+//   rsi  → konteks posisi harga (atas/bawah)
+//   wick → panjang ekor bawah candlestick (konfirmasi akum terselubung)
+function calculateBDR(volumes, closes, rvol, rsi, wick) {
   const n    = 20;
   const rv   = volumes.slice(-n);
   const avgV = avg(rv);
-  let big = 0;
+
+  let bigUp   = 0; // hari dengan volume besar DAN harga naik
+  let bigDown = 0; // hari dengan volume besar DAN harga turun/flat
+
   for (let i = 1; i < rv.length; i++) {
-    if (rv[i] > avgV * 1.5 && closes[closes.length - n + i] >= closes[closes.length - n + i - 1]) big++;
+    const volBesar   = rv[i] > avgV * 1.5;
+    const hargaNaik  = closes[closes.length - n + i] >  closes[closes.length - n + i - 1];
+    const hargaTurun = closes[closes.length - n + i] <= closes[closes.length - n + i - 1];
+    if (volBesar && hargaNaik)  bigUp++;
+    if (volBesar && hargaTurun) bigDown++;
   }
+
   const c1 = closes[closes.length - 1];
   const c2 = closes[closes.length - 2];
   const c3 = closes[closes.length - 3];
-  if (rvol > 2   && big >= 4 && c1 >= c2 && c2 >= c3) return { label: 'BIG ACC', score: 3 };
-  if (rvol > 1.4 && big >= 2)                          return { label: 'AKUM',    score: 2 };
-  if (rvol < 0.6 && c1 < c2)                           return { label: 'DIST',    score: -2 };
-  return                                                 { label: '',        score: 0 };
+
+  // ── AKUMULASI TERANG-TERANGAN ──────────────────────────────────────────
+  // BIG ACC: volume luar biasa + banyak hari akum + 3 hari harga naik berturut
+  if (rvol > 2   && bigUp >= 4 && c1 >= c2 && c2 >= c3) return { label: 'BIG ACC',  score: 3 };
+
+  // AKUM normal: volume di atas rata + minimal 2 hari pola akumulasi
+  if (rvol > 1.4 && bigUp >= 2)                          return { label: 'AKUM',     score: 2 };
+
+  // ── AKUMULASI TERSELUBUNG ──────────────────────────────────────────────
+  // Volume besar + harga turun TAPI RSI sudah rendah (zona bawah / oversold)
+  // → bandar sengaja tekan harga agar retail panik jual, bandar yang beli
+  // Dikuatkan jika ada wick bawah panjang (> 25%) = ada yang serap di bawah
+  if (rvol > 1.5 && bigDown >= 2 && c1 < c2 && rsi < 40) {
+    if (wick > 25) return { label: 'AKUM',    score: 2 }; // wick panjang → konfirmasi kuat
+    return           { label: 'AKUM?',   score: 1 };      // tanpa wick → masih ambigu, score kecil
+  }
+
+  // RSI 40–45 + wick panjang + volume besar = potensi akumulasi, tapi belum pasti
+  if (rvol > 1.5 && bigDown >= 2 && c1 < c2 && rsi < 45 && wick > 30) {
+    return { label: 'AKUM?', score: 1 };
+  }
+
+  // ── DISTRIBUSI ─────────────────────────────────────────────────────────
+  // Volume besar + harga turun + RSI masih tinggi (zona atas)
+  // → bandar jual ke retail yang masih antusias, harga mulai tertekan
+
+  // DIST agresif: volume tinggi + banyak hari distribusi + harga turun + RSI atas
+  if (rvol > 1.5 && bigDown >= 3 && c1 < c2 && rsi > 55) return { label: 'DIST',    score: -2 };
+
+  // DIST halus: volume sedang + 2 hari berturut turun + RSI masih di atas tengah
+  if (rvol > 1.2 && bigDown >= 2 && c1 < c2 && c2 < c3 && rsi > 50) return { label: 'DIST', score: -2 };
+
+  // ── ZONA AMBIGU (RSI 40–55, volume besar, harga turun) ────────────────
+  // Tidak cukup data untuk tentukan arah → jangan labelkan apapun
+  return { label: '', score: 0 };
 }
 
 // ===== PWR =====
@@ -190,8 +241,11 @@ function calculatePWR(rsi, macd, macdSig, rvol, chg, hist, goldenCross, deathCro
   else if (chg < -4)   s -= 2;
   else if (chg < -2)   s -= 1;
 
-  if (goldenCross)     s += 2;
-  if (deathCross)      s -= 2;
+  if (goldenCross)       s += 2;
+  if (deathCross)        s -= 2;
+
+  // BDR boost/penalti — AKUM? hanya dapat setengah poin
+  // (sudah dihandle via bdr.score di caller, tapi PWR juga perlu tahu)
 
   return Math.min(5, Math.max(1, s));
 }
@@ -209,7 +263,7 @@ function calculateFASE(rsi, macd, macdSig, chg, wick, hist) {
 }
 
 // ===== AKSI / SINYAL AKHIR =====
-// Urutan prioritas dari referensi + filter zone dari versi kita
+// Urutan prioritas dari referensi + filter zone + proteksi BDR DIST + AKUM terselubung
 function calculateAKSI(rsi, macd, macdSig, rvol, chg, pwr, fase, goldenCross, deathCross, bdr, zone) {
   const bull     = macd > macdSig;
   const bullZone = zone === 'BULL_ZONE' || zone === 'ZERO_CROSS_UP';
@@ -219,7 +273,7 @@ function calculateAKSI(rsi, macd, macdSig, rvol, chg, pwr, fase, goldenCross, de
   // 1. Death Cross → langsung SELL
   if (deathCross) return 'SELL';
 
-  // 2. BDR distribusi + bearish → SELL
+  // 2. BDR DIST + bearish → SELL
   if (bdr === 'DIST' && !bull) return 'SELL';
 
   // 3. RSI overbought + bearish → SELL
@@ -230,6 +284,46 @@ function calculateAKSI(rsi, macd, macdSig, rvol, chg, pwr, fase, goldenCross, de
 
   // 5. PWR lemah + bearish + RSI tinggi → SELL
   if (pwr <= 2 && !bull && rsi > 60) return 'SELL';
+
+  // ── PROTEKSI BDR DIST + BULL ZONE ────────────────────────────────────
+  // Sinyal teknikal bagus tapi bandar sedang distribusi → jebakan bull
+  // Paksa HOLD, tidak boleh entry
+  if (bdr === 'DIST' && bullZone) return 'HOLD';
+
+  // Golden Cross di BEAR ZONE + DIST → semua sinyal negatif → SELL
+  // (golden cross terjadi tapi MACD masih negatif + bandar distribusi = tidak ada yang benar)
+  if (goldenCross && bearZone && bdr === 'DIST') return 'SELL';
+
+  // ── AKUM TERSELUBUNG ─────────────────────────────────────────────────
+  // Harga turun tapi bandar sedang kumpul (RSI rendah + wick panjang)
+  // AKUM?  = konfirmasi belum penuh → perlakukan seperti HOLD dulu
+  //          tapi tidak paksa SELL, tunggu konfirmasi naik
+  // AKUM   = konfirmasi cukup → bisa diperlakukan seperti sinyal BUY biasa
+  // (tidak ada override khusus — biarkan flow BUY normal berjalan di bawah)
+
+  // ── BUY (dari terkuat ke terlemah) ──────────────────────────────────
+  // 6. Golden Cross + bull + volume → HAKA
+  //    Tapi jika terjadi di BEAR_ZONE → turunkan ke BUY
+  if (goldenCross && bull && rvol > 1.0) {
+    return bearZone ? 'BUY' : 'HAKA';
+  }
+
+  // 7. AKUM terselubung terkonfirmasi (label 'AKUM') + RSI rendah + bull
+  //    → upgrade ke BUY meski pwr mungkin belum tinggi
+  if (bdr === 'AKUM' && bull && rsi < 45 && fase !== 'BREAKDOWN') return 'BUY';
+
+  // 8. HAKA normal → wajib BULL_ZONE
+  if (pwr >= 4 && bull && (fase === 'BREAKOUT' || fase === 'REBOUND') && rvol > 1.3) {
+    return bullZone ? 'HAKA' : 'BUY';
+  }
+
+  // 9. BUY standar → jika BEAR_ZONE turunkan ke HOLD
+  if (pwr >= 3 && bull && fase !== 'BREAKDOWN') {
+    return bearZone ? 'HOLD' : 'BUY';
+  }
+
+  return 'HOLD';
+}
 
   // ── BUY (dari terkuat ke terlemah) ──────────────────────────────────
   // 6. Golden Cross + bull + volume → HAKA

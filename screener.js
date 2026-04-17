@@ -37,8 +37,7 @@ const HEADERS = {
 function getUrls(symbol) {
   return [
     `https://query2.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=3mo`,
-    `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=3mo`,
-    `https://query2.finance.yahoo.com/v7/finance/download/${symbol}?period1=${Math.floor((Date.now()-90*24*60*60*1000)/1000)}&period2=${Math.floor(Date.now()/1000)}&interval=1d&events=history`
+    `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=3mo`
   ];
 }
 
@@ -57,24 +56,22 @@ async function fetchData(ticker) {
         timeout: 15000
       });
 
-      if (urls[i].includes('/v8/') || urls[i].includes('/v7/finance/chart')) {
-        const chart = res.data.chart?.result?.[0];
-        if (!chart) continue;
+      const chart = res.data.chart?.result?.[0];
+      if (!chart) continue;
 
-        const meta    = chart.meta;
-        const quote   = chart.indicators.quote[0];
-        const closes  = quote.close.filter(v  => v != null);
-        const highs   = quote.high.filter(v   => v != null);
-        const lows    = quote.low.filter(v    => v != null);
-        const volumes = quote.volume.filter(v => v != null);
+      const meta    = chart.meta;
+      const quote   = chart.indicators.quote[0];
+      const closes  = quote.close.filter(v  => v != null);
+      const highs   = quote.high.filter(v   => v != null);
+      const lows    = quote.low.filter(v    => v != null);
+      const volumes = quote.volume.filter(v => v != null);
 
-        if (closes.length < 30) continue;
+      if (closes.length < 30) continue;
 
-        const price     = meta.regularMarketPrice || closes[closes.length - 1];
-        const prevClose = meta.previousClose      || closes[closes.length - 2];
+      const price     = meta.regularMarketPrice || closes[closes.length - 1];
+      const prevClose = meta.previousClose      || closes[closes.length - 2];
 
-        return { closes, highs, lows, volumes, price, prevClose };
-      }
+      return { closes, highs, lows, volumes, price, prevClose };
 
     } catch (err) {
       console.log(`Gagal URL ${i+1} untuk ${ticker}: ${err.message}`);
@@ -157,17 +154,15 @@ async function runScreener() {
   const sukses = Object.values(results).filter(r => r.ok).length;
   console.log(`\nScan selesai - ${sukses}/${WATCHLIST.length} saham berhasil\n`);
 
-  // ── Summary: Sinyal HAKA / BUY terkonfirmasi ────────────────────────
+  // Summary Sinyal Beli
   console.log('─'.repeat(70));
   console.log('🟢 SINYAL BELI TERKONFIRMASI (Golden Cross / Bull Zone):');
   console.log('─'.repeat(70));
-
   const beliBull = Object.values(results).filter(r =>
     r.ok &&
     (r.aksi === 'HAKA' || r.aksi === 'BUY') &&
     (r.goldenCross || r.zone === 'BULL_ZONE' || r.zone === 'ZERO_CROSS_UP')
   );
-
   if (!beliBull.length) {
     console.log('  Tidak ada sinyal beli terkonfirmasi.');
   } else {
@@ -181,17 +176,15 @@ async function runScreener() {
     });
   }
 
-  // ── Summary: Sinyal SELL terkonfirmasi ──────────────────────────────
+  // Summary Sinyal Jual
   console.log('\n' + '─'.repeat(70));
   console.log('🔴 SINYAL JUAL TERKONFIRMASI (Death Cross / Bear Zone):');
   console.log('─'.repeat(70));
-
   const jualBear = Object.values(results).filter(r =>
     r.ok &&
     r.aksi === 'SELL' &&
     (r.deathCross || r.zone === 'BEAR_ZONE' || r.zone === 'ZERO_CROSS_DOWN')
   );
-
   if (!jualBear.length) {
     console.log('  Tidak ada sinyal jual terkonfirmasi.');
   } else {
@@ -205,20 +198,18 @@ async function runScreener() {
     });
   }
 
-  // ── Summary: Sinyal ambigu (BUY tapi Bear Zone, atau SELL tapi Bull Zone) ──
+  // Summary Sinyal Ambigu
   console.log('\n' + '─'.repeat(70));
   console.log('⚠️  SINYAL AMBIGU (arah sinyal vs zone berlawanan):');
   console.log('─'.repeat(70));
-
   const ambigu = Object.values(results).filter(r => {
     if (!r.ok) return false;
-    const beliTapiBeZone = (r.aksi === 'BUY' || r.aksi === 'HAKA') &&
-                           (r.zone === 'BEAR_ZONE' || r.zone === 'ZERO_CROSS_DOWN');
+    const beliTapiBearZone = (r.aksi === 'BUY' || r.aksi === 'HAKA') &&
+                             (r.zone === 'BEAR_ZONE' || r.zone === 'ZERO_CROSS_DOWN');
     const jualTapiBullZone = r.aksi === 'SELL' &&
                              (r.zone === 'BULL_ZONE' || r.zone === 'ZERO_CROSS_UP');
-    return beliTapiBeZone || jualTapiBullZone;
+    return beliTapiBearZone || jualTapiBullZone;
   });
-
   if (!ambigu.length) {
     console.log('  Tidak ada sinyal ambigu.');
   } else {

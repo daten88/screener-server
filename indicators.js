@@ -19,6 +19,14 @@ function calculateAKSI(rsi,macd,macdSig,rvol,chg,pwr,fase,goldenCross,deathCross
   const bearZone=zone==='BEAR_ZONE'||zone==='ZERO_CROSS_DOWN';
 
   // SELL prioritas tertinggi
+  // Death Cross + Bull Zone = kemungkinan false signal (koreksi dalam uptrend)
+  // Konfirmasi via FASE dan RSI sebelum SELL
+  if(deathCross&&bullZone){
+    if(fase==='BREAKDOWN')return'SELL';            // breakdown nyata → SELL valid
+    if(fase==='SIDEWAYS'&&rsi<50)return'SELL';     // momentum melemah → SELL valid
+    return'HOLD';                                   // BREAKOUT/REBOUND atau RSI kuat → tahan
+  }
+  // Death Cross di Bear Zone = langsung SELL (konfirmasi penuh)
   if(deathCross)return'SELL';
   if(bdr==='DIST'&&!bull)return'SELL';
   if(rsi>70&&!bull)return'SELL';

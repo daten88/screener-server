@@ -18,29 +18,29 @@ function calculateAKSI(rsi,macd,macdSig,rvol,chg,pwr,fase,goldenCross,deathCross
   const bullZone=zone==='BULL_ZONE'||zone==='ZERO_CROSS_UP';
   const bearZone=zone==='BEAR_ZONE'||zone==='ZERO_CROSS_DOWN';
 
-  // SELL prioritas tertinggi
-  // Death Cross + Bull Zone = kemungkinan false signal (koreksi dalam uptrend)
-  // Konfirmasi via FASE dan RSI sebelum SELL
+  // Death Cross di Bull Zone → filter lebih dulu
+  // Tidak langsung SELL karena bisa false signal di tengah uptrend
   if(deathCross&&bullZone){
-    if(fase==='BREAKDOWN')return'SELL';            // breakdown nyata → SELL valid
-    if(fase==='SIDEWAYS'&&rsi<50)return'SELL';     // momentum melemah → SELL valid
-    return'HOLD';                                   // BREAKOUT/REBOUND atau RSI kuat → tahan
+    if(fase==='BREAKDOWN')return'SELL';  // breakdown nyata → SELL valid
+    if(fase==='SIDEWAYS')return'SELL';   // momentum melemah → SELL valid
+    return'HOLD';                         // BREAKOUT/REBOUND masih kuat → tahan
   }
-  // Death Cross di Bear Zone = langsung SELL (konfirmasi penuh)
+
+  // Death Cross di Bear Zone → konfirmasi penuh → langsung SELL
   if(deathCross)return'SELL';
   if(bdr==='DIST'&&!bull)return'SELL';
   if(rsi>70&&!bull)return'SELL';
   if(fase==='BREAKDOWN')return'SELL';
   if(pwr<=2&&!bull&&rsi>60)return'SELL';
 
-  // Proteksi DIST
+  // Proteksi DIST di bull zone = jebakan bull
   if(bdr==='DIST'&&bullZone)return'HOLD';
   if(goldenCross&&bearZone&&bdr==='DIST')return'SELL';
 
   // Golden Cross
   if(goldenCross&&bull&&rvol>1.0)return bearZone?'BUY':'HAKA';
 
-  // AKUM terselubung
+  // AKUM terselubung terkonfirmasi
   if(bdr==='AKUM'&&bull&&rsi<45&&fase!=='BREAKDOWN')return'BUY';
 
   // HAKA normal

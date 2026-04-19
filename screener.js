@@ -1,7 +1,11 @@
 const axios=require('axios');
 const{calculateRSI,getRSISignal,calculateMACD,getMACDSignal,getZoneLabel,calculateRVOL,getRVOLSignal,calculateATR,calculateCHG,calculateWick,calculateBDR,calculatePWR,calculateFASE,calculateAKSI,calculateTPSL,calculateEntry}=require('./indicators');
 
-const WATCHLIST=['AHAP','ARCI','BIPI','BNBR','BRMS','BULL','BUMI','BUVA','BWPT','COCO','CUAN','DATA','DEWA','GTSI','HUMI','IMPC','INDY','KETR','MBMA','MBSS','MINA','NINE','PADA','PADI','PANI','PSKT','RAJA','SOFA','SUPA','TAPG','TPIA','TRUE','VKTR','WIFI','ZATA'];
+const WATCHLIST=['AHAP','ARCI','AYAM','BIPI','BNBR','BRMS','BULL','BUMI','BUVA','BWPT',
+'COCO','CUAN','DATA','DEWA','DKFT','ENRG','GTSI','HUMI','IMPC','INCO',
+'INDY','JPFA','KBLV','KETR','KLAS','KPIG','MBMA','MBSS','MINA','NINE',
+'PADA','PADI','PANI','PBSA','PSKT','PYFA','RAJA','SOCI','SOFA','SUPA',
+'TAPG','TKIM','TINS','TOBA','TPIA','TRIN','TRUE','VKTR','WIFI','ZATA'];
 
 const HEADERS={'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36','Accept':'application/json, text/plain, */*','Accept-Language':'en-US,en;q=0.9','Accept-Encoding':'gzip, deflate, br','Referer':'https://finance.yahoo.com','Origin':'https://finance.yahoo.com','Cache-Control':'no-cache','Pragma':'no-cache'};
 

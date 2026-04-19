@@ -19,15 +19,10 @@ function calculateAKSI(rsi,macd,macdSig,rvol,chg,pwr,fase,goldenCross,deathCross
   const bearZone=zone==='BEAR_ZONE'||zone==='ZERO_CROSS_DOWN';
 
   // Death Cross di Bull Zone → filter lebih dulu
-  // Tidak langsung SELL karena bisa false signal di tengah uptrend
+  // Fix bug: SIDEWAYS selalu SELL tanpa syarat RSI
   if(deathCross&&bullZone){
-    if(fase==='BREAKDOWN')return'SELL';  // breakdown nyata → SELL valid
-    if(fase==='SIDEWAYS'){
-      if(rsi<40) return'HOLD';           // RSI terlalu rendah → exhaustion / false signal
-      if(rsi<50) return'SELL';           // momentum melemah → exit valid
-      return'HOLD';                      // RSI ≥ 50 → masih ada strength, tahan
-    }
-    return'HOLD';                        // BREAKOUT / REBOUND → tahan
+    if(fase==='BREAKDOWN'||fase==='SIDEWAYS')return'SELL';
+    return'HOLD'; // BREAKOUT/REBOUND masih kuat → tahan
   }
 
   // Death Cross di Bear Zone → konfirmasi penuh → langsung SELL
@@ -44,7 +39,7 @@ function calculateAKSI(rsi,macd,macdSig,rvol,chg,pwr,fase,goldenCross,deathCross
   // Golden Cross
   if(goldenCross&&bull&&rvol>1.0)return bearZone?'BUY':'HAKA';
 
-  // BIG ACC = akumulasi agresif bandar → sinyal terkuat, perkuat ke HAKA
+  // BIG ACC = akumulasi masif bandar → sinyal terkuat → langsung HAKA
   if(bdr==='BIG ACC'&&bull&&rvol>1.3){
     return bullZone?'HAKA':'BUY';
   }

@@ -11,16 +11,13 @@ const {
 } = require('./indicators');
 
 const WATCHLIST = [
-  'AHAP', 'ARCI', 'BBYB', 'BIPI', 'BNBR',
-  'BRMS', 'BULL', 'BUMI', 'BUVA', 'BWPT',
-  'COCO', 'COIN', 'CUAN', 'DATA', 'DEWA',
-  'DOOH', 'EMAS', 'ENRG', 'GTSI', 'HUMI',
-  'IMPC', 'INDY', 'KBLV', 'KETR', 'KLAS',
-  'KPIG', 'MBMA', 'MINA', 'NINE', 'OASA',
-  'PADA', 'PADI', 'PANI', 'PBSA', 'PNLF',
-  'PSKT', 'PTRO', 'RAJA', 'SOCI', 'SOFA',
-  'SUPA', 'TAPG', 'TOBA', 'TPIA', 'TRIN',
-  'TRUE', 'VKTR', 'WIFI', 'WMUU', 'ZATA',
+  'AHAP', 'ARCI', 'BIPI', 'BNBR', 'BRMS',
+  'BULL', 'BUMI', 'BUVA', 'BWPT', 'COCO',
+  'CUAN', 'DATA', 'DEWA', 'GTSI', 'HUMI',
+  'IMPC', 'INDY', 'KETR', 'MBMA', 'MINA',
+  'NINE', 'PADA', 'PADI', 'PANI', 'PBSA',
+  'PSKT', 'RAJA', 'SOFA', 'SUPA', 'TAPG',
+  'TPIA', 'TRUE', 'VKTR', 'WIFI', 'ZATA',
 ];
 
 const HEADERS = {

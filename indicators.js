@@ -17,60 +17,49 @@ function calculateAKSI(rsi,macd,macdSig,rvol,chg,pwr,fase,goldenCross,deathCross
   const bull=macd>macdSig;
   const bullZone=zone==='BULL_ZONE'||zone==='ZERO_CROSS_UP';
   const bearZone=zone==='BEAR_ZONE'||zone==='ZERO_CROSS_DOWN';
+
+  // Death Cross di Bull Zone → filter lebih dulu
+  // Tidak langsung SELL karena bisa false signal di tengah uptrend
   if(deathCross&&bullZone){
-    if(fase==='BREAKDOWN'||fase==='SIDEWAYS')return'SELL';
-    return'HOLD';
+    if(fase==='BREAKDOWN')return'SELL';  // breakdown nyata → SELL valid
+    if(fase==='SIDEWAYS')return'SELL';   // momentum melemah → SELL valid
+    return'HOLD';                         // BREAKOUT/REBOUND masih kuat → tahan
   }
+
+  // Death Cross di Bear Zone → konfirmasi penuh → langsung SELL
   if(deathCross)return'SELL';
   if(bdr==='DIST'&&!bull)return'SELL';
   if(rsi>70&&!bull)return'SELL';
   if(fase==='BREAKDOWN')return'SELL';
   if(pwr<=2&&!bull&&rsi>60)return'SELL';
+
+  // Proteksi DIST di bull zone = jebakan bull
   if(bdr==='DIST'&&bullZone)return'HOLD';
   if(goldenCross&&bearZone&&bdr==='DIST')return'SELL';
+
+  // Golden Cross
   if(goldenCross&&bull&&rvol>1.0)return bearZone?'BUY':'HAKA';
-  if((bdr==='AKUM'||bdr==='BIG ACC')&&bull&&rsi<45&&fase!=='BREAKDOWN')return'BUY';
-  if(pwr>=4&&bull&&(fase==='BREAKOUT'||fase==='REBOUND')&&rvol>1.3)return bullZone?'HAKA':'BUY';
+
+  // AKUM terselubung terkonfirmasi
+  if(bdr==='AKUM'&&bull&&rsi<45&&fase!=='BREAKDOWN')return'BUY';
+
+  // HAKA normal
+  if(pwr>=4&&bull&&(fase==='BREAKOUT'||fase==='REBOUND')&&rvol>1.3){
+    return bullZone?'HAKA':'BUY';
+  }
+
+  // BUY standar
   if(pwr>=3&&bull&&fase!=='BREAKDOWN'){
+    // Pengecualian bear zone: potensi bottom/rebound kuat
     if(bearZone&&pwr>=4&&rsi<45&&fase==='REBOUND')return'BUY';
     if(bearZone&&pwr>=5&&rsi<50)return'BUY';
     return bearZone?'HOLD':'BUY';
   }
+
   return'HOLD';
 }
 function getFraksi(price){if(price<200)return 1;if(price<500)return 2;if(price<2000)return 5;if(price<5000)return 10;return 25;}
 function roundToFraksi(price,fraksi){return Math.round(price/fraksi)*fraksi;}
-function calculateTPSL(price,atr,fase,aksi,highs,lows,lowPrev){
-  const fraksi=getFraksi(price);
-  const resist=Math.max(...highs.slice(-10));
-  let tp,sl;
-
-  if(aksi==='SELL'){
-    tp=roundToFraksi(price-atr*1.5,fraksi);
-    sl=roundToFraksi(price+atr*1.0,fraksi);
-  }else{
-    // TP pakai ATR
-    const mult=fase==='BREAKOUT'?2.5:2.0;
-    tp=roundToFraksi(Math.min(price+atr*mult,resist*1.02),fraksi);
-    if(tp<=price)tp=roundToFraksi(price+atr*1.5,fraksi);
-
-    // SL: kombinasi low kemarin vs ATR
-    const slLowKemarin=roundToFraksi(lowPrev-fraksi,fraksi);
-    const slATR=roundToFraksi(price-atr*1.0,fraksi);
-    const maxRisk=price*0.05; // max risk 5%
-    const riskLowKemarin=price-slLowKemarin;
-
-    if(riskLowKemarin<=maxRisk&&slLowKemarin>slATR){
-      sl=slLowKemarin; // low kemarin lebih ketat & masuk akal
-    }else if(riskLowKemarin<=maxRisk&&slLowKemarin<=slATR){
-      sl=slATR; // ATR lebih ketat
-    }else{
-      sl=slATR; // low kemarin terlalu jauh, fallback ATR
-    }
-
-    if(sl>=price)sl=roundToFraksi(price-fraksi*3,fraksi);
-  }
-  return{tp,sl};
-}
+function calculateTPSL(price,atr,fase,aksi,highs,lows){const resist=Math.max(...highs.slice(-10));const support=Math.min(...lows.slice(-10));const fraksi=getFraksi(price);let tp,sl;if(aksi==='SELL'){tp=roundToFraksi(price-atr*1.5,fraksi);sl=roundToFraksi(price+atr*1.0,fraksi);}else{const mult=fase==='BREAKOUT'?2.5:2.0;tp=roundToFraksi(Math.min(price+atr*mult,resist*1.02),fraksi);sl=roundToFraksi(Math.max(price-atr*1.0,support*0.99),fraksi);if(tp<=price)tp=roundToFraksi(price+atr*1.5,fraksi);if(sl>=price)sl=roundToFraksi(price-atr*0.8,fraksi);}return{tp,sl};}
 function calculateEntry(price,atr,fase,aksi,highs,lows){const fraksi=getFraksi(price);const support=Math.min(...lows.slice(-10));let e1,e2,e3;if(aksi==='SELL')return{e1:null,e2:null,e3:null};if(fase==='BREAKOUT'){e1=roundToFraksi(price,fraksi);e2=roundToFraksi(price-atr*0.3,fraksi);e3=roundToFraksi(price-atr*0.6,fraksi);}else if(fase==='REBOUND'){e1=roundToFraksi(price,fraksi);e2=roundToFraksi(price-atr*0.5,fraksi);e3=roundToFraksi(Math.max(support*1.01,price-atr*1.0),fraksi);}else{e1=roundToFraksi(price,fraksi);e2=roundToFraksi(price-atr*0.4,fraksi);e3=roundToFraksi(price-atr*0.8,fraksi);}const sl=roundToFraksi(Math.max(price-atr*1.0,support*0.99),fraksi);if(e3<=sl)e3=roundToFraksi(sl+fraksi*2,fraksi);if(e2<=sl)e2=roundToFraksi(sl+fraksi*4,fraksi);return{e1,e2,e3};}
 module.exports={avg,calculateRSI,getRSISignal,calculateMACD,getMACDSignal,getZoneLabel,calculateRVOL,getRVOLSignal,calculateATR,calculateCHG,calculateWick,calculateBDR,calculatePWR,calculateFASE,calculateAKSI,calculateTPSL,calculateEntry,getFraksi,roundToFraksi};

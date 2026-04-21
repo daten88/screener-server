@@ -12,7 +12,13 @@ const {
   calculateRegime, applyFilters
 } = require('./indicators');
 
-const WATCHLIST = ['AHAP','ARCI','BIPI','BNBR','BULL','BUMI','BUVA','BWPT','CUAN','DATA','DEWA','HUMI','IMPC','INDY','KETR','MBMA','MBSS','MINA','NINE','PADA','PANI','PSKT','RAJA','SOFA','TAPG','TPIA','TRUE','VKTR','WIFI','ZATA'];
+const WATCHLIST = ['AHAP','ARCI','AYAM','BBCA','BBRI','BIPI','BKSL','BNBR','BRMS','BRPT',
+'BULL','BUMI','BUVA','BWPT','COCO','COIN','CPRO','CUAN','DATA','DEWA',
+'DKFT','EMAS','EMTK','ENRG','ESSA','EXCL','FORE','GOTO','GTSI','GZCO',
+'HUMI','IMPC','INCO','INDY','JPFA','KBLV','KETR','KLAS','KPIG','MBMA',
+'MBSS','MDKA','MINA','NINE','OASA','PADA','PADI','PANI','PBSA','PSAT',
+'PSKT','PTRO','PYFA','RAJA','SCMA','SINI','SOCI','SOFA','SUPA','TAPG',
+'TKIM','TINS','TOBA','TPIA','TRIN','TRUE','VKTR','WIFI','WMUU','ZATA'];
 
 // ── Config ──────────────────────────────────────────────────────────────
 const MIN_LIQUIDITY_IDR = 5_000_000_000;  // Rp 5 miliar/hari avg value

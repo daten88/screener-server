@@ -1,82 +1,90 @@
 const express = require('express');
 const cron    = require('node-cron');
-const { runScreener, screenStock, fetchIHSG, WATCHLIST } = require('./screener');
+const { runScreener, screenStock, fetchIHSG, WATCHLIST }                         = require('./screener');
+const { runSimpleScreener, screenSimpleStock, getLastIHSG, WATCHLIST: WL_SIMPLE } = require('./screener_simple');
 
 const app  = express();
 app.use(express.static('public'));
 const PORT = process.env.PORT || 3000;
 
-// ── State ──────────────────────────────────────────────────────────────
-// Patch v2: `latestData` dipecah jadi 2 variabel.
-// `latestResults` = object per ticker (struktur sama seperti v1)
-// `latestRegime`  = info market regime IHSG (baru di v2)
+// ── State: Complex Screener (v2) ───────────────────────────────────────────
 let latestResults = {};
 let latestRegime  = { regime:'UNKNOWN', rsi:50, price:null, sma50:null, sma200:null };
 let lastScanTime  = null;
 let isRefreshing  = false;
 
+// ── State: Simple Screener ─────────────────────────────────────────────────
+let simpleResults      = {};
+let simpleLastScan     = null;
+let isSimpleRefreshing = false;
+
+// ── Refresh: Complex ──────────────────────────────────────────────────────
 async function refreshAll() {
   if (isRefreshing) return;
   isRefreshing = true;
-  console.log('Refreshing semua saham...');
+  console.log('[Complex] Refreshing...');
   try {
-    // Patch v2: runScreener() sekarang return { results, regimeInfo }
     const { results, regimeInfo } = await runScreener();
     latestResults = results;
     latestRegime  = regimeInfo;
     lastScanTime  = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
-    console.log('Refresh selesai: ' + lastScanTime + ' | IHSG: ' + regimeInfo.regime);
+    console.log('[Complex] Selesai: ' + lastScanTime + ' | IHSG: ' + regimeInfo.regime);
   } catch (err) {
-    // Patch v2: error handling biar tidak deadlock kalau runScreener throw
-    console.error('Refresh GAGAL:', err.message);
+    console.error('[Complex] GAGAL:', err.message);
   } finally {
     isRefreshing = false;
   }
 }
 
-// Scan otomatis setiap 2 menit jam bursa
-cron.schedule('*/2 9-15 * * 1-5', async () => {
-  await refreshAll();
-}, { timezone: 'Asia/Jakarta' });
+// ── Refresh: Simple ────────────────────────────────────────────────────────
+async function refreshSimple() {
+  if (isSimpleRefreshing) return;
+  isSimpleRefreshing = true;
+  console.log('[Simple] Refreshing...');
+  try {
+    const { results } = await runSimpleScreener(); // ihsg di-cache di module
+    simpleResults  = results;
+    simpleLastScan = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
+    console.log('[Simple] Selesai: ' + simpleLastScan);
+  } catch (err) {
+    console.error('[Simple] GAGAL:', err.message);
+  } finally {
+    isSimpleRefreshing = false;
+  }
+}
 
-// ── ENDPOINTS ──────────────────────────────────────────────────────────
+// ── Cron: setiap 2 menit jam bursa, offset 1 menit antar screener ─────────
+cron.schedule('*/2 9-15 * * 1-5',    refreshAll,    { timezone: 'Asia/Jakarta' });
+cron.schedule('1-59/2 9-15 * * 1-5', refreshSimple, { timezone: 'Asia/Jakarta' });
 
-// GET /data — kompatibel dengan v1 frontend, plus field `regime` baru
+// ═══ ENDPOINTS: Complex Screener (v2) ════════════════════════════════════════
+
 app.get('/data', (req, res) => {
-  res.json({
-    data:     latestResults,   // ← struktur sama seperti v1 (object per ticker)
-    regime:   latestRegime,    // ← baru: info regime IHSG
-    ts:       Date.now(),
-    lastScan: lastScanTime
-  });
+  res.json({ data: latestResults, regime: latestRegime, ts: Date.now(), lastScan: lastScanTime });
 });
 
-// GET /regime — khusus fetch regime IHSG
 app.get('/regime', (req, res) => {
   res.json({ regime: latestRegime, ts: Date.now() });
 });
 
 app.get('/health', (req, res) => {
   res.json({
-    status:   'ok',
-    stocks:   Object.keys(latestResults).length,
-    regime:   latestRegime.regime,
-    lastScan: lastScanTime
+    status:      'ok',
+    stocks:      Object.keys(latestResults).length,
+    regime:      latestRegime.regime,
+    lastScan:    lastScanTime,
+    simpleLastScan,
+    portfolio:   parseInt(process.env.PORTFOLIO_IDR || '100000000'),
   });
 });
 
-// GET /screener/:ticker — on-demand scan 1 saham
-// Patch v2: wajib pass regimeInfo, fallback fetch kalau belum ada
 app.get('/screener/:ticker', async (req, res) => {
   try {
-    // Kalau regime belum di-cache (server baru start, belum cron pertama),
-    // fetch cepat ditempat biar filter v2 tetap bekerja.
     let regimeInfo = latestRegime;
     if (regimeInfo.regime === 'UNKNOWN') {
       regimeInfo = await fetchIHSG();
-      latestRegime = regimeInfo;  // cache
+      latestRegime = regimeInfo;
     }
-
     const result = await screenStock(req.params.ticker.toUpperCase(), regimeInfo);
     if (!result) return res.status(404).json({ error: 'Data tidak ditemukan' });
     res.json(result);
@@ -85,8 +93,33 @@ app.get('/screener/:ticker', async (req, res) => {
   }
 });
 
-// ── START SERVER ───────────────────────────────────────────────────────
+// ═══ ENDPOINTS: Simple Screener ══════════════════════════════════════════════
+
+app.get('/data-simple', (req, res) => {
+  res.json({
+    data:      simpleResults,
+    ihsg:      getLastIHSG(),          // ← kirim IHSG simple ke frontend
+    portfolio: parseInt(process.env.PORTFOLIO_IDR || '100000000'),
+    ts:        Date.now(),
+    lastScan:  simpleLastScan,
+  });
+});
+
+app.get('/screener-simple/:ticker', async (req, res) => {
+  try {
+    // Pakai IHSG yang di-cache oleh runSimpleScreener, kalau belum ada fetch baru
+    const ihsgData = getLastIHSG()?.price ? getLastIHSG() : null;
+    const result = await screenSimpleStock(req.params.ticker.toUpperCase(), ihsgData);
+    if (!result) return res.status(404).json({ error: 'Data tidak ditemukan' });
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Start server ──────────────────────────────────────────────────────────
 app.listen(PORT, async () => {
   console.log('Server berjalan di port ' + PORT);
-  await refreshAll();
+  console.log('Portfolio: Rp ' + parseInt(process.env.PORTFOLIO_IDR || '100000000').toLocaleString('id-ID'));
+  await Promise.all([ refreshAll(), refreshSimple() ]);
 });

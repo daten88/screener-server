@@ -403,7 +403,8 @@ async function screenSimpleStock(ticker, ihsgData = null) {
   const { closes, highs, lows, volumes, price, prevClose } = data;
 
   const stoch = calculateStoch(highs, lows, closes);
-  const macd  = calculateMACD(closes);
+  // MACD: gunakan 63 bar terakhir — fix EMA path dependency
+  const macd  = calculateMACD(closes.slice(-63));
   if (!stoch || !macd) return { ticker, ok: false, error: 'Data tidak cukup' };
 
   // Indikator tambahan

@@ -12,7 +12,7 @@ const {
   calculateRegime, applyFilters
 } = require('./indicators');
 
-const WATCHLIST = ['AHAP','ARCI','BIPI','BNBR','BRMS','BULL','BUMI','BUVA','BWPT','COCO','CUAN','DATA','DEWA','GTSI','HUMI','IMPC','INDY','KETR','MBMA','MBSS','MINA','NINE','PADA','PADI','PANI','PSKT','RAJA','SOFA','SUPA','TAPG','TPIA','TRUE','VKTR','WIFI','ZATA'];
+const WATCHLIST = ['AHAP','ARCI','BIPI','BNBR','BULL','BUMI','BUVA','BWPT','CUAN','DATA','DEWA','HUMI','IMPC','INDY','KETR','MBMA','MBSS','MINA','NINE','PADA','PANI','PSKT','RAJA','SOFA','TAPG','TPIA','TRUE','VKTR','WIFI','ZATA'];
 
 // ── Config ──────────────────────────────────────────────────────────────
 const MIN_LIQUIDITY_IDR = 5_000_000_000;  // Rp 5 miliar/hari avg value

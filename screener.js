@@ -20,7 +20,7 @@ const WATCHLIST = ['AHAP','ARCI','BGTG','BIPI','BNBR','BRMS','BULL','BUMI','BUVA
 
 // ── Config ──────────────────────────────────────────────────────────────
 const MIN_LIQUIDITY_IDR = 5_000_000_000;  // Rp 5 miliar/hari avg value
-const FETCH_RANGE       = '5y';  // Fix EMA convergence: 5y ≈ 1260 bar → EMA fully converged, MACD mendekati TradingView
+const FETCH_RANGE       = '1y';            // Patch v2: dari '3mo' → '1y' (butuh 200 bar untuk SMA200)
 
 const HEADERS = {
   'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',

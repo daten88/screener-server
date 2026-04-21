@@ -368,9 +368,8 @@ function getLiquidityStatus(liquidity, minValueIDR=5_000_000_000){
 
 // ── FIX #3: KONFIRMASI MACD CROSS ────────────────────────────────────────
 // Tolak cross yang "noise" di sekitar zero line.
-// Valid kalau histogram magnitude > threshold (cukup besar, bukan noise).
-// Catatan: syarat akselerasi (hist harus growing) dihapus — histogram yang
-// masih positif tapi shrinking tetap valid sebagai golden cross terkonfirmasi.
+// Valid kalau: (a) histogram magnitude > threshold, dan
+//              (b) histogram masih accelerating di arah cross.
 function confirmCross(price, hist, histPrev, goldenCross, deathCross){
   if(!goldenCross && !deathCross) return { confirmed:true, reason:'no-cross' };
 
@@ -378,14 +377,14 @@ function confirmCross(price, hist, histPrev, goldenCross, deathCross){
   const histThreshold = Math.max(0.1, price * 0.0005);
 
   if(goldenCross){
-    // Cukup cek magnitude — histogram positif dan bukan noise di sekitar nol
-    if(hist < histThreshold) return { confirmed:false, reason:`hist ${hist} < threshold (noise)` };
+    if(hist < histThreshold)     return { confirmed:false, reason:`hist ${hist} < threshold` };
+    if(hist <= histPrev)         return { confirmed:false, reason:'hist tidak akselerasi' };
     return { confirmed:true, reason:'valid' };
   }
 
   if(deathCross){
-    // Cukup cek magnitude — histogram negatif dan bukan noise
-    if(Math.abs(hist) < histThreshold) return { confirmed:false, reason:`hist ${hist} < threshold (noise)` };
+    if(Math.abs(hist) < histThreshold) return { confirmed:false, reason:`hist ${hist} < threshold` };
+    if(hist >= histPrev)                return { confirmed:false, reason:'hist tidak akselerasi' };
     return { confirmed:true, reason:'valid' };
   }
 

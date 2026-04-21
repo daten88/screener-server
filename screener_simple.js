@@ -51,7 +51,7 @@ const CFG = {
   MIN_LIQUIDITY: 5_000_000_000,   // Rp 5 miliar
   VOL_RATIO_MIN: 0.8,    // volume hari cross ≥ 0.8× avg
   RISK_PER_TRADE: 0.02,  // 2% portfolio per trade
-  FETCH_RANGE:   '6mo',
+  FETCH_RANGE:   '5y',   // Fix EMA convergence: 5y → MACD values mendekati TradingView
 };
 
 // Portfolio size — set via env variable di Railway: PORTFOLIO_IDR=500000000
@@ -403,8 +403,7 @@ async function screenSimpleStock(ticker, ihsgData = null) {
   const { closes, highs, lows, volumes, price, prevClose } = data;
 
   const stoch = calculateStoch(highs, lows, closes);
-  // MACD: gunakan 63 bar terakhir — fix EMA path dependency
-  const macd  = calculateMACD(closes.slice(-63));
+  const macd  = calculateMACD(closes);
   if (!stoch || !macd) return { ticker, ok: false, error: 'Data tidak cukup' };
 
   // Indikator tambahan

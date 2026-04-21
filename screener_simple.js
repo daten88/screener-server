@@ -27,6 +27,7 @@
 
 'use strict';
 const axios = require('axios');
+const TI    = require('technicalindicators'); // sama persis seperti complex screener
 
 // ── Config ────────────────────────────────────────────────────────────────────
 const WATCHLIST = [
@@ -50,7 +51,7 @@ const CFG = {
   MIN_LIQUIDITY: 5_000_000_000,   // Rp 5 miliar
   VOL_RATIO_MIN: 0.8,    // volume hari cross ≥ 0.8× avg
   RISK_PER_TRADE: 0.02,  // 2% portfolio per trade
-  FETCH_RANGE:   '6mo',
+  FETCH_RANGE:   '5y',   // Fix EMA convergence: 5y → MACD values mendekati TradingView
 };
 
 // Portfolio size — set via env variable di Railway: PORTFOLIO_IDR=500000000
@@ -155,34 +156,41 @@ function calculateStoch(highs, lows, closes) {
   return { k: smoothK.slice(smoothK.length - n), d: dArr };
 }
 
-// ── MACD(12,26,9) — Manual EMA ───────────────────────────────────────────────
-function ema(values, period) {
-  const k = 2 / (period + 1);
-  let e = values[0];
-  return values.map((v, i) => { if (i === 0) return e; e = v * k + e * (1 - k); return e; });
-}
-
+// ── MACD(12,26,9) — Library-based (sama seperti complex screener) ─────────────
+// Manual EMA dihapus: hasilnya tidak akurat karena EMA path-dependent dan butuh
+// data historis sangat panjang untuk konvergen ke nilai TradingView.
+// Library technicalindicators memberikan hasil yang jauh lebih dekat ke TradingView.
 function calculateMACD(closes) {
-  if (closes.length < 34) return null;
-  const macdLine  = ema(closes, 12).map((f, i) => f - ema(closes, 26)[i]);
-  const macdValid = macdLine.slice(25);
-  const sigLine   = ema(macdValid, 9);
-  const n         = sigLine.length;
-  const macdOut   = macdValid.slice(macdValid.length - n);
-  if (n < 2) return null;
+  try {
+    const result = TI.MACD.calculate({
+      values: closes,
+      fastPeriod: 12, slowPeriod: 26, signalPeriod: 9,
+      SimpleMAOscillator: false, SimpleMASignal: false
+    });
+    if (!result.length) return null;
 
-  const mNow  = macdOut.at(-1), sNow  = sigLine.at(-1), hNow  = mNow - sNow;
-  const mPrev = macdOut.at(-2), sPrev = sigLine.at(-2), hPrev = mPrev - sPrev;
+    const last = result.at(-1);
+    const prev = result.length >= 2 ? result.at(-2) : last;
 
-  return {
-    macd:        round2(mNow),
-    signal:      round2(sNow),
-    hist:        round2(hNow),
-    goldenCross: mPrev < sPrev && mNow >= sNow,
-    deathCross:  mPrev > sPrev && mNow <= sNow,
-    bullish:     mNow > sNow,
-    histGrowing: hNow > hPrev,
-  };
+    const mNow  = last.MACD      ?? 0;
+    const sNow  = last.signal    ?? 0;
+    const hNow  = last.histogram ?? 0;
+    const mPrev = prev.MACD      ?? 0;
+    const sPrev = prev.signal    ?? 0;
+    const hPrev = prev.histogram ?? 0;
+
+    return {
+      macd:        round2(mNow),
+      signal:      round2(sNow),
+      hist:        round2(hNow),
+      goldenCross: mPrev < sPrev && mNow >= sNow,
+      deathCross:  mPrev > sPrev && mNow <= sNow,
+      bullish:     mNow > sNow,
+      histGrowing: hNow > hPrev,
+    };
+  } catch {
+    return null;
+  }
 }
 
 // ── PATCH #4: ATR(14) ─────────────────────────────────────────────────────────

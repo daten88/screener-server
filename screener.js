@@ -14,7 +14,9 @@ const {
 
 const WATCHLIST = ['AHAP','ARCI','BGTG','BIPI','BNBR','BRMS','BULL','BUMI','BUVA','BWPT',
 'COCO','CUAN','DATA','DEWA','DKFT','EMAS','EMTK','ENRG','GOTO','GTSI',
-'HUMI','IMPC','INCO','INDY','JPFA','KETR','KPIG','MBMA','MBSS','MDKA'];
+'HUMI','IMPC','INCO','INDY','JPFA','KETR','KPIG','MBMA','MBSS','MDKA',
+'MINA','NINE','PADA','PADI','PANI','PSAT','PSKT','PYFA','RAJA','SINI',
+'SOFA','SUPA','TAPG','TKIM','TPIA','TRIN','TRUE','VKTR','WIFI','ZATA'];
 
 // ── Config ──────────────────────────────────────────────────────────────
 const MIN_LIQUIDITY_IDR = 5_000_000_000;  // Rp 5 miliar/hari avg value
@@ -94,7 +96,9 @@ async function screenStock(ticker, regimeInfo){
 
   // ── Indikator teknikal standar ─────────────────────────────────────
   const rsi  = calculateRSI(closes);
-  const { macd, signal:macdSig, hist, histPrev, macdPrev, signalPrev, goldenCross, deathCross, zone } = calculateMACD(closes);
+  // MACD: gunakan 63 bar terakhir (~3bln) — fix EMA path dependency akibat range=1y
+  const macdCloses = closes.slice(-63);
+  const { macd, signal:macdSig, hist, histPrev, macdPrev, signalPrev, goldenCross, deathCross, zone } = calculateMACD(macdCloses);
   const rvol = calculateRVOL(volumes);
   const atr  = calculateATR(highs, lows, closes);
   const chg  = calculateCHG(price, prevClose);

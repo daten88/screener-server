@@ -30,6 +30,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
 .mood-val{font-size:14px;font-weight:600}
 .mood-sep{color:#333}
 .mood-stat{font-size:11px;color:#555}
+/* ── Patch v2: regime IHSG badge ── */
+.regime-box{display:flex;align-items:center;gap:8px;background:#0d0d0d;border-radius:10px;padding:10px 14px;margin-bottom:10px;flex-wrap:wrap;border:1px solid #222}
+.regime-lbl{font-size:11px;color:#555}
+.regime-badge{font-size:12px;font-weight:700;padding:4px 12px;border-radius:8px;letter-spacing:.04em}
+.regime-bull{background:#0a2a1a;color:#00ff88;border:1px solid #00ff88}
+.regime-neutral{background:#2a1a00;color:#ffaa00;border:1px solid #ffaa00}
+.regime-bear{background:#2a0a0a;color:#ff4444;border:1px solid #ff4444;animation:warnpulse 2s infinite}
+.regime-unknown{background:#222;color:#888;border:1px solid #333}
+.regime-meta{font-size:11px;color:#666;margin-left:auto}
+.regime-note{font-size:10px;color:#ff8800;font-style:italic}
 .filter-row{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;align-items:center}
 .filter-label{font-size:10px;color:#555}
 .fb{font-size:11px;padding:5px 12px;border-radius:8px;border:1px solid #333;background:#111;color:#666;cursor:pointer}
@@ -47,6 +57,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
 .fb-dc.on{background:#1a0000;color:#ff4444;border-color:#ff4444}
 .fb-bz.on{background:#001a0a;color:#00cc66;border-color:#00cc66}
 .fb-brz.on{background:#111;color:#666;border-color:#555}
+/* ── Patch v2: filter v2 ── */
+.fb-v2.on{background:#0a2a2a;color:#00ffcc;border-color:#00ffcc}
+.fb-dg.on{background:#2a1500;color:#ff8800;border-color:#ff8800}
 .sep{color:#333;font-size:12px}
 .add-bar{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;align-items:center}
 .add-bar input{font-size:12px;padding:6px 10px;border:1px solid #333;border-radius:8px;background:#111;color:#fff;width:140px;text-transform:uppercase;outline:none}
@@ -62,6 +75,10 @@ td{padding:8px;border-bottom:1px solid #1a1a1a;white-space:nowrap}
 tr.dr{cursor:pointer}
 tr.dr:hover td{background:#1a1a1a}
 tr.sel td{background:#0a1a2a}
+/* ── Patch v2: row downgraded oleh filter ── */
+tr.dr.downgraded td{background:#1a0f00}
+tr.dr.downgraded:hover td{background:#2a1800}
+tr.dr.downgraded.sel td{background:#2a1800}
 .em{font-weight:600;font-size:13px;color:#fff}
 .gp{color:#00ff88;font-weight:500}
 .gn{color:#ff4444;font-weight:500}
@@ -83,6 +100,19 @@ tr.sel td{background:#0a1a2a}
 .b-bearz{background:#111;color:#555;border:1px solid #333}
 .b-zup{background:#001a10;color:#00ffaa;border:1px solid #00ffaa}
 .b-zdown{background:#1a0005;color:#ff6688;border:1px solid #ff6688}
+/* ── Patch v2: warning/downgrade indicator ── */
+.warn-icon{display:inline-block;font-size:11px;color:#ff8800;cursor:help;margin-left:4px}
+.rr-tag{font-size:10px;color:#888;margin-left:4px}
+.rr-good{color:#00ff88}
+.rr-bad{color:#ff8800}
+.liq-badge{display:inline-block;font-size:9px;padding:2px 6px;border-radius:6px;margin-left:4px}
+.liq-likuid{background:#0a2a1a;color:#00ff88}
+.liq-tipis{background:#2a1a00;color:#ffaa00}
+.liq-ilikuid{background:#2a0a0a;color:#ff4444}
+.trend-arrow{display:inline-block;font-size:10px;margin-left:3px}
+.trend-up{color:#00ff88}
+.trend-down{color:#ff4444}
+.trend-na{color:#555}
 .pwr{display:inline-flex;gap:3px;align-items:center}
 .pd{width:7px;height:7px;border-radius:50%;background:#222}
 .pd.g{background:#00ff88}
@@ -118,6 +148,7 @@ tr.sel td{background:#0a1a2a}
   <div style="display:flex;flex-direction:column;gap:4px">
     <span class="tbar-title">
       <span class="live-dot" id="liveDot"></span>Screener Saham IDX &mdash; Live
+      <span style="font-size:10px;color:#00ffcc;margin-left:6px;font-weight:400">v2</span>
     </span>
     <span style="font-size:10px;color:#333;letter-spacing:0.3px">
       Hak Cipta &copy; 2026 David Tendean. Screener ini bersifat rahasia dan merupakan milik David Tendean. Dilarang keras merekam, menyalin, atau mendistribusikan ulang.
@@ -129,6 +160,13 @@ tr.sel td{background:#0a1a2a}
 
 <div class="prog"><div class="prog-fill" id="progFill" style="width:0%"></div></div>
 
+<!-- ── Patch v2: Market Regime IHSG ── -->
+<div class="regime-box">
+  <span class="regime-lbl">IHSG Regime</span>
+  <span class="regime-badge regime-unknown" id="regimeBadge">&mdash;</span>
+  <span class="regime-meta" id="regimeMeta">Menunggu data IHSG...</span>
+</div>
+
 <div class="sum-grid">
   <div class="sc"><div class="sk">HAKA</div><div class="sv" id="cH" style="color:#00ff88">0</div></div>
   <div class="sc"><div class="sk">BUY</div><div class="sv" id="cB" style="color:#00aaff">0</div></div>
@@ -137,7 +175,7 @@ tr.sel td{background:#0a1a2a}
 </div>
 
 <div class="mood-bar">
-  <span class="mood-lbl">Mood Pasar</span>
+  <span class="mood-lbl">Mood Watchlist</span>
   <span class="mood-val" id="moodVal">&mdash;</span>
   <span class="mood-sep">|</span>
   <span class="mood-stat" id="moodStat">Menunggu data...</span>
@@ -161,6 +199,11 @@ tr.sel td{background:#0a1a2a}
   <button class="fb fb-dc" onclick="setFilter('cross','DEATH',this)">💀 Death</button>
   <button class="fb fb-bz" onclick="setFilter('cross','BULL_ZONE',this)">🔵 Bull Zone</button>
   <button class="fb fb-brz" onclick="setFilter('cross','BEAR_ZONE',this)">⚫ Bear Zone</button>
+  <span class="sep">|</span>
+  <!-- ── Patch v2: filter khusus v2 ── -->
+  <span class="filter-label">QUALITY</span>
+  <button class="fb fb-v2" onclick="setFilter('v2','CLEAN',this)">✓ Lolos v2</button>
+  <button class="fb fb-dg" onclick="setFilter('v2','DOWNGRADED',this)">⚠ Downgrade</button>
 </div>
 
 <div class="add-bar">
@@ -188,11 +231,12 @@ tr.sel td{background:#0a1a2a}
     <th onclick="sortBy('e3')">ENTRY 3</th>
     <th onclick="sortBy('tp')">TP</th>
     <th onclick="sortBy('sl')">SL</th>
+    <th onclick="sortBy('rr')">R:R</th>
     <th onclick="sortBy('aksi')">SINYAL</th>
     <th></th>
   </tr></thead>
   <tbody id="tBody">
-    <tr><td colspan="17" style="text-align:center;padding:30px;color:#555">
+    <tr><td colspan="18" style="text-align:center;padding:30px;color:#555">
       <span class="spin"></span> Memuat data...
     </td></tr>
   </tbody>
@@ -214,18 +258,21 @@ tr.sel td{background:#0a1a2a}
   <div style="padding:10px 14px;border-bottom:1px solid #222;display:flex;gap:16px;flex-wrap:wrap">
     <span id="cEntry" style="font-size:11px"></span>
     <span id="cTpSl" style="font-size:11px"></span>
+    <!-- ── Patch v2: warning list di chart panel ── -->
+    <span id="cWarn" style="font-size:11px;color:#ff8800"></span>
   </div>
   <div class="tv-wrap" id="tvWrap"></div>
 </div>
 
 <div class="note">
   Data update otomatis tiap 2 menit jam bursa. Klik baris untuk chart TradingView.<br>
+  <strong>Patch v2 aktif:</strong> sinyal telah difilter oleh likuiditas, SMA200, konfirmasi MACD cross, regime IHSG, dan R:R ≥ 1:2. Row dengan warna gelap coklat = downgrade oleh filter v2.<br>
   <strong>Bukan rekomendasi investasi. Selalu lakukan analisa mandiri.</strong>
 </div>
 </div>
 
 <script>
-var cache={}, sel=null, fType='aksi', fVal='ALL', sKey='aksi', sAsc=true;
+var cache={}, regime={regime:'UNKNOWN'}, sel=null, fType='aksi', fVal='ALL', sKey='aksi', sAsc=true;
 var cdInt=null, cdN=30;
 var AO={HAKA:0,BUY:1,HOLD:2,SELL:3};
 var FO={BREAKOUT:0,REBOUND:1,SIDEWAYS:2,BREAKDOWN:3};
@@ -249,12 +296,36 @@ function setStatus(s){
   }
 }
 
+// ── Patch v2: update regime badge dari response ──
+function updateRegime(r){
+  if(!r) return;
+  regime=r;
+  var badge=document.getElementById('regimeBadge');
+  var meta=document.getElementById('regimeMeta');
+  var cls={BULL:'regime-bull',NEUTRAL:'regime-neutral',BEAR:'regime-bear',UNKNOWN:'regime-unknown'}[r.regime]||'regime-unknown';
+  var label={BULL:'🟢 BULL',NEUTRAL:'🟡 NEUTRAL',BEAR:'🔴 BEAR',UNKNOWN:'⚪ UNKNOWN'}[r.regime]||r.regime;
+  badge.className='regime-badge '+cls;
+  badge.textContent=label;
+
+  var parts=[];
+  if(r.price)  parts.push('IHSG: '+Math.round(r.price).toLocaleString('id-ID'));
+  if(r.rsi)    parts.push('RSI: '+r.rsi);
+  if(r.sma50)  parts.push('SMA50: '+Math.round(r.sma50).toLocaleString('id-ID'));
+  if(r.sma200) parts.push('SMA200: '+Math.round(r.sma200).toLocaleString('id-ID'));
+  var note='';
+  if(r.regime==='BEAR')    note=' <span class="regime-note">— HAKA otomatis turun ke BUY, BUY turun ke HOLD</span>';
+  if(r.regime==='NEUTRAL') note=' <span class="regime-note">— HAKA otomatis turun ke BUY (kecuali super kuat)</span>';
+  meta.innerHTML=parts.join(' · ')+note;
+}
+
 async function fetchData(){
   try{
     var r=await fetch('/data');
     if(!r.ok) throw new Error('HTTP '+r.status);
     var j=await r.json();
     var data=j.data||{};
+    // ── Patch v2: regime IHSG ──
+    if(j.regime) updateRegime(j.regime);
     if(Object.keys(data).length===0){
       setTimeout(fetchData,3000);
       return;
@@ -310,9 +381,11 @@ function rsiBar(rsi){
     +'</span>';
 }
 
-function crossBadge(golden,death,zone){
-  if(golden) return '<span class="badge b-golden">🟡 GOLDEN</span>';
-  if(death)  return '<span class="badge b-death">💀 DEATH</span>';
+function crossBadge(golden,death,zone,crossValid){
+  // ── Patch v2: tampilkan invalid-cross warning ──
+  var invalidSuffix=(crossValid===false)?' <span class="warn-icon" title="Cross tidak terkonfirmasi — histogram lemah atau tidak akselerasi">⚠</span>':'';
+  if(golden) return '<span class="badge b-golden">🟡 GOLDEN</span>'+invalidSuffix;
+  if(death)  return '<span class="badge b-death">💀 DEATH</span>'+invalidSuffix;
   if(zone==='ZERO_CROSS_UP')   return '<span class="badge b-zup">⬆️ ZERO↑</span>';
   if(zone==='ZERO_CROSS_DOWN') return '<span class="badge b-zdown">⬇️ ZERO↓</span>';
   if(zone==='BULL_ZONE') return '<span class="badge b-bullz">🔵 BULL</span>';
@@ -336,9 +409,40 @@ function bBadge(b,zone){
   return '<span class="badge '+(m[b]||'b-sw')+'">'+b+'</span>';
 }
 
-function aBadge(a){
+// ── Patch v2: AKSI badge dengan downgrade indicator ──
+function aBadge(d){
+  var a=d.aksi;
   var m={HAKA:'b-haka',BUY:'b-buy',HOLD:'b-hold',SELL:'b-sell'};
-  return '<span class="badge '+(m[a]||'b-sw')+'" style="padding:4px 10px;font-size:10px">'+a+'</span>';
+  var html='<span class="badge '+(m[a]||'b-sw')+'" style="padding:4px 10px;font-size:10px">'+a+'</span>';
+  if(d.downgraded && d.aksiOriginal && d.aksiOriginal!==a){
+    var tip='Downgrade: '+d.aksiOriginal+' → '+a;
+    if(d.blocksFrom && d.blocksFrom.length) tip+='\n'+d.blocksFrom.join('\n');
+    html+=' <span class="warn-icon" title="'+tip.replace(/"/g,'&quot;')+'">⬇</span>';
+  }
+  return html;
+}
+
+// ── Patch v2: R:R badge ──
+function rrBadge(rr){
+  if(!rr || rr<=0) return '<span style="color:#333;font-size:11px">&mdash;</span>';
+  var cls=rr>=2?'rr-good':'rr-bad';
+  return '<span class="'+cls+'" style="font-size:11px;font-weight:500">'+rr.toFixed(2)+'</span>';
+}
+
+// ── Patch v2: trend arrow (SMA200) ──
+function trendArrow(d){
+  if(d.aboveSMA200===true)  return '<span class="trend-arrow trend-up" title="Di atas SMA200 (uptrend LT)">↗</span>';
+  if(d.aboveSMA200===false) return '<span class="trend-arrow trend-down" title="Di bawah SMA200 (downtrend LT)">↘</span>';
+  return '<span class="trend-arrow trend-na" title="Data <200 bar">?</span>';
+}
+
+// ── Patch v2: liquidity badge ──
+function liqBadge(liq){
+  if(!liq) return '';
+  if(liq==='LIKUID+' || liq==='LIKUID') return '<span class="liq-badge liq-likuid" title="Rata-rata nilai transaksi ≥ Rp 5M/hari">'+liq+'</span>';
+  if(liq==='TIPIS')   return '<span class="liq-badge liq-tipis" title="Likuiditas tipis — kurangi size">TIPIS</span>';
+  if(liq==='ILIKUID') return '<span class="liq-badge liq-ilikuid" title="Likuiditas kering — berbahaya untuk entry">ILIKUID</span>';
+  return '';
 }
 
 function setFilter(type,val,btn){
@@ -367,6 +471,7 @@ function getSV(d){
     return zo[d.zone]!=null?zo[d.zone]:2;
   }
   if(sKey==='ticker') return d.ticker;
+  if(sKey==='rr')     return d.rr!=null?d.rr:-1;
   return d[sKey]!=null?d[sKey]:0;
 }
 
@@ -387,6 +492,9 @@ function updateMood(){
   var stat=bo+' Breakout · '+rb+' Rebound · '+bd+' Breakdown · '+sw+' Sideways';
   if(gc) stat+=' · <span style="color:#ffd700;font-weight:600">'+gc+' Golden Cross</span>';
   if(dc) stat+=' · <span style="color:#ff4444;font-weight:600">'+dc+' Death Cross</span>';
+  // ── Patch v2: counter downgrade ──
+  var dg=ld.filter(function(d){ return d.downgraded; }).length;
+  if(dg) stat+=' · <span style="color:#ff8800;font-weight:600">'+dg+' Downgrade</span>';
   document.getElementById('moodStat').innerHTML=stat;
 }
 
@@ -406,7 +514,7 @@ function renderTable(){
     var d=cache[t];
     if(!d||!d.ok){
       if(fVal!=='ALL') return null;
-      return{t:t,sv:9999,html:'<tr class="dr"><td class="em">'+t+'</td><td colspan="15" class="err-t">'+(d?d.error:'...')+'</td><td><button class="del" onclick="delRow(\''+t+'\')">x</button></td></tr>'};
+      return{t:t,sv:9999,html:'<tr class="dr"><td class="em">'+t+'</td><td colspan="16" class="err-t">'+(d?d.error:'...')+'</td><td><button class="del" onclick="delRow(\''+t+'\')">x</button></td></tr>'};
     }
     if(fType==='aksi'&&fVal!=='ALL'&&d.aksi!==fVal) return null;
     if(fType==='fase'&&d.fase!==fVal) return null;
@@ -415,6 +523,11 @@ function renderTable(){
       if(fVal==='DEATH'&&!d.deathCross) return null;
       if(fVal==='BULL_ZONE'&&d.zone!=='BULL_ZONE'&&d.zone!=='ZERO_CROSS_UP') return null;
       if(fVal==='BEAR_ZONE'&&d.zone!=='BEAR_ZONE'&&d.zone!=='ZERO_CROSS_DOWN') return null;
+    }
+    // ── Patch v2: filter v2 ──
+    if(fType==='v2'){
+      if(fVal==='CLEAN'      && d.downgraded) return null;
+      if(fVal==='DOWNGRADED' && !d.downgraded) return null;
     }
 
     var cc=d.chg>=0?'gp':'gn';
@@ -426,14 +539,23 @@ function renderTable(){
     else if(d.rvol>=0.6) rc='#aaaaaa';
     else                 rc='#444444';
     var selCls=sel===t?' sel':'';
+    var dgCls=d.downgraded?' downgraded':'';
 
-    var row='<tr class="dr'+selCls+'" onclick="rowClick(\''+t+'\')">'
-      +'<td class="em">'+t+'</td>'
+    // TP/SL dengan tooltip R:R
+    var rrTip=d.rr?' title="R:R 1:'+d.rr.toFixed(2)+'"':'';
+    var tpHtml='<span class="tp-v"'+rrTip+'>'+(d.tp?d.tp.toLocaleString('id-ID'):'&mdash;')+'</span>';
+    var slHtml='<span class="sl-v"'+rrTip+'>'+(d.sl?d.sl.toLocaleString('id-ID'):'&mdash;')+'</span>';
+
+    // Emiten cell dengan trend arrow + liquidity badge
+    var emitenCell='<td class="em">'+t+trendArrow(d)+liqBadge(d.liquidity)+'</td>';
+
+    var row='<tr class="dr'+selCls+dgCls+'" onclick="rowClick(\''+t+'\')">'
+      +emitenCell
       +'<td style="color:#ffaa00;font-weight:500">'+d.price.toLocaleString('id-ID')+'</td>'
       +'<td class="'+cc+'">'+(d.chg>=0?'+':'')+d.chg.toFixed(1)+'%</td>'
       +'<td>'+rsiBar(d.rsi)+'</td>'
       +'<td style="color:'+mc+';font-weight:500;font-size:11px">'+(d.macd>0?'+':'')+d.macd+'</td>'
-      +'<td>'+crossBadge(d.goldenCross,d.deathCross,d.zone)+'</td>'
+      +'<td>'+crossBadge(d.goldenCross,d.deathCross,d.zone,d.crossValid)+'</td>'
       +'<td style="font-size:11px;color:'+rc+'">'+d.rvol.toFixed(1)+'x</td>'
       +'<td>'+bBadge(d.bdr,d.zone)+'</td>'
       +'<td>'+pwrDots(d.pwr,d.fase)+'</td>'
@@ -441,9 +563,10 @@ function renderTable(){
       +'<td><span class="e1-v">'+(d.e1?d.e1.toLocaleString('id-ID'):'&mdash;')+'</span></td>'
       +'<td><span class="e2-v">'+(d.e2?d.e2.toLocaleString('id-ID'):'&mdash;')+'</span></td>'
       +'<td><span class="e3-v">'+(d.e3?d.e3.toLocaleString('id-ID'):'&mdash;')+'</span></td>'
-      +'<td><span class="tp-v">'+(d.tp?d.tp.toLocaleString('id-ID'):'&mdash;')+'</span></td>'
-      +'<td><span class="sl-v">'+(d.sl?d.sl.toLocaleString('id-ID'):'&mdash;')+'</span></td>'
-      +'<td>'+aBadge(d.aksi)+'</td>'
+      +'<td>'+tpHtml+'</td>'
+      +'<td>'+slHtml+'</td>'
+      +'<td>'+rrBadge(d.rr)+'</td>'
+      +'<td>'+aBadge(d)+'</td>'
       +'<td><button class="del" onclick="event.stopPropagation();delRow(\''+t+'\')">x</button></td>'
       +'</tr>';
     return{t:t,sv:getSV(d),html:row};
@@ -478,18 +601,26 @@ function showChart(t){
   var d=cache[t];
   document.getElementById('cTicker').textContent=t+'.JK';
   document.getElementById('cFase').innerHTML=d&&d.ok?fBadge(d.fase):'';
-  document.getElementById('cAksi').innerHTML=d&&d.ok?aBadge(d.aksi):'';
+  document.getElementById('cAksi').innerHTML=d&&d.ok?aBadge(d):'';
   document.getElementById('cPwr').innerHTML=d&&d.ok?pwrDots(d.pwr,d.fase):'';
   document.getElementById('cBdr').innerHTML=d&&d.ok?bBadge(d.bdr,d.zone):'';
-  document.getElementById('cCross').innerHTML=d&&d.ok?crossBadge(d.goldenCross,d.deathCross,d.zone):'';
+  document.getElementById('cCross').innerHTML=d&&d.ok?crossBadge(d.goldenCross,d.deathCross,d.zone,d.crossValid):'';
   if(d&&d.ok){
     document.getElementById('cEntry').innerHTML=
       '<span class="e1-v">E1 '+(d.e1?d.e1.toLocaleString('id-ID'):'&mdash;')+'</span> &nbsp; '
       +'<span class="e2-v">E2 '+(d.e2?d.e2.toLocaleString('id-ID'):'&mdash;')+'</span> &nbsp; '
       +'<span class="e3-v">E3 '+(d.e3?d.e3.toLocaleString('id-ID'):'&mdash;')+'</span>';
+    var rrTxt=d.rr?' <span class="'+(d.rr>=2?'rr-good':'rr-bad')+'" style="font-weight:600">(R:R 1:'+d.rr.toFixed(2)+')</span>':'';
     document.getElementById('cTpSl').innerHTML=
       '<span class="tp-v">TP '+(d.tp?d.tp.toLocaleString('id-ID'):'&mdash;')+'</span> &nbsp; '
-      +'<span class="sl-v">SL '+(d.sl?d.sl.toLocaleString('id-ID'):'&mdash;')+'</span>';
+      +'<span class="sl-v">SL '+(d.sl?d.sl.toLocaleString('id-ID'):'&mdash;')+'</span>'+rrTxt;
+    // ── Patch v2: tampilkan warnings di chart panel ──
+    var warnEl=document.getElementById('cWarn');
+    if(d.warnings && d.warnings.length){
+      warnEl.innerHTML='⚠ '+d.warnings.join(' · ');
+    }else{
+      warnEl.innerHTML='';
+    }
   }
   var tvUrl='https://s.tradingview.com/widgetembed/?frameElementId=tv_'+t
     +'&symbol=IDX%3A'+t

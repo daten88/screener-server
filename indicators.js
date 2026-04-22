@@ -368,9 +368,8 @@ function getLiquidityStatus(liquidity, minValueIDR=5_000_000_000){
 
 // ── FIX #3: KONFIRMASI MACD CROSS ────────────────────────────────────────
 // Tolak cross yang "noise" di sekitar zero line.
-// Valid kalau histogram magnitude > threshold (cukup besar, bukan noise).
-// Catatan: syarat akselerasi (hist harus growing) dihapus — histogram yang
-// masih positif tapi shrinking tetap valid sebagai golden cross terkonfirmasi.
+// Valid kalau: (a) histogram magnitude > threshold, dan
+//              (b) histogram masih accelerating di arah cross.
 function confirmCross(price, hist, histPrev, goldenCross, deathCross){
   if(!goldenCross && !deathCross) return { confirmed:true, reason:'no-cross' };
 
@@ -378,14 +377,14 @@ function confirmCross(price, hist, histPrev, goldenCross, deathCross){
   const histThreshold = Math.max(0.1, price * 0.0005);
 
   if(goldenCross){
-    // Cukup cek magnitude — histogram positif dan bukan noise di sekitar nol
-    if(hist < histThreshold) return { confirmed:false, reason:`hist ${hist} < threshold (noise)` };
+    if(hist < histThreshold)     return { confirmed:false, reason:`hist ${hist} < threshold` };
+    if(hist <= histPrev)         return { confirmed:false, reason:'hist tidak akselerasi' };
     return { confirmed:true, reason:'valid' };
   }
 
   if(deathCross){
-    // Cukup cek magnitude — histogram negatif dan bukan noise
-    if(Math.abs(hist) < histThreshold) return { confirmed:false, reason:`hist ${hist} < threshold (noise)` };
+    if(Math.abs(hist) < histThreshold) return { confirmed:false, reason:`hist ${hist} < threshold` };
+    if(hist >= histPrev)                return { confirmed:false, reason:'hist tidak akselerasi' };
     return { confirmed:true, reason:'valid' };
   }
 
@@ -439,7 +438,8 @@ function applyFilters(ctx){
   const {
     aksi, price, tp, sl, closes,
     pwr, bdr, hist, histPrev, goldenCross, deathCross,
-    liquidityStatus, regime
+    liquidityStatus, regime,
+    rvol = 1, fase = ''      // ← patch v2.1: untuk BEAR exception
   } = ctx;
 
   const warnings   = [];
@@ -478,8 +478,11 @@ function applyFilters(ctx){
 
   if(sma200 !== null && !aboveSMA200){
     // Di bawah SMA200 = downtrend jangka panjang.
-    // Hanya boleh BUY/HAKA kalau PWR maksimal + BIG ACC (akumulasi bandar kuat).
-    const superStrong = pwr >= 5 && bdr === 'BIG ACC';
+    // Di BEAR regime: threshold diturunkan (hampir semua saham <SMA200 saat BEAR).
+    // Di BULL/NEUTRAL: tetap ketat — hanya PWR>=5 + BIG ACC.
+    const superStrong = regime === 'BEAR'
+      ? pwr >= 4 && (bdr === 'BIG ACC' || bdr === 'AKUM')
+      : pwr >= 5 && bdr === 'BIG ACC';
     if((finalAksi === 'HAKA' || finalAksi === 'BUY') && !superStrong){
       const prevAksi = finalAksi;
       if(finalAksi === 'HAKA') finalAksi = 'BUY';   // downgrade agresivitas
@@ -498,9 +501,17 @@ function applyFilters(ctx){
       blocksFrom.push('#4 IHSG BEAR: HAKA→BUY');
       warnings.push('IHSG BEAR — agresivitas diturunkan');
     }else if(finalAksi === 'BUY'){
-      finalAksi = 'HOLD';
-      blocksFrom.push('#4 IHSG BEAR: BUY→HOLD');
-      warnings.push('IHSG BEAR — BUY ditahan');
+      // Exception: tetap lolos sebagai BUY kalau saham menunjukkan kekuatan
+      // signifikan di atas market (outlier bear market).
+      // Syarat: PWR >= 4, RVOL >= 2x, FASE BREAKOUT atau REBOUND
+      const bearOutlier = pwr >= 4 && rvol >= 2 && (fase === 'BREAKOUT' || fase === 'REBOUND');
+      if(bearOutlier){
+        warnings.push('⚡ BEAR OUTLIER: lolos filter IHSG BEAR (PWR kuat + RVOL tinggi + ' + fase + ')');
+      }else{
+        finalAksi = 'HOLD';
+        blocksFrom.push('#4 IHSG BEAR: BUY→HOLD');
+        warnings.push('IHSG BEAR — BUY ditahan');
+      }
     }
   }else if(regime === 'NEUTRAL'){
     if(finalAksi === 'HAKA' && !(pwr >= 5 && bdr === 'BIG ACC')){
@@ -510,13 +521,16 @@ function applyFilters(ctx){
     }
   }
 
-  // ── FIX #5: R:R minimum 1:2 ───────────────────────────────────────────
+  // ── FIX #5: R:R minimum ───────────────────────────────────────────────
+  // BEAR regime: target lebih pendek, threshold diturunkan ke 1.5.
+  // BULL/NEUTRAL: tetap 2.0.
+  const rrMin = regime === 'BEAR' ? 1.5 : 2.0;
   const rr = calculateRR(price, tp, sl, finalAksi);
-  if((finalAksi === 'HAKA' || finalAksi === 'BUY') && rr > 0 && rr < 2){
+  if((finalAksi === 'HAKA' || finalAksi === 'BUY') && rr > 0 && rr < rrMin){
     const prevAksi = finalAksi;
     finalAksi = 'HOLD';
-    blocksFrom.push(`#5 R:R ${rr}<2: ${prevAksi}→HOLD`);
-    warnings.push(`R:R ${rr} < 1:2 — setup tidak worth risk`);
+    blocksFrom.push(`#5 R:R ${rr}<${rrMin}: ${prevAksi}→HOLD`);
+    warnings.push(`R:R ${rr} < 1:${rrMin} — setup tidak worth risk`);
   }
   if(finalAksi === 'SELL' && rr > 0 && rr < 1.5){
     warnings.push(`R:R SELL ${rr} < 1:1.5 (marginal)`);

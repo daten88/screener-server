@@ -31,10 +31,11 @@ const TI    = require('technicalindicators'); // sama persis seperti complex scr
 
 // ── Config ────────────────────────────────────────────────────────────────────
 const WATCHLIST = [
-  'AHAP','ARCI','BIPI','BNBR','BRMS','BULL','BUMI','BUVA','BWPT','COCO',
-  'CUAN','DATA','DEWA','GTSI','HUMI','IMPC','INDY','KETR','MBMA','MBSS',
-  'MINA','NINE','PADA','PADI','PANI','PSKT','RAJA','SOFA','SUPA','TAPG',
-  'TPIA','TRUE','VKTR','WIFI','ZATA'
+  'AHAP','ARCI','BGTG','BIPI','BNBR','BRMS','BULL','BUMI','BUVA','BWPT',
+  'COCO','CUAN','DATA','DEWA','DKFT','EMAS','EMTK','ENRG','GOTO','GTSI',
+  'HUMI','IMPC','INCO','INDY','JPFA','KETR','KPIG','MBMA','MBSS','MDKA',
+  'MINA','NINE','PADA','PADI','PANI','PSAT','PSKT','PYFA','RAJA','SINI',
+  'SOFA','SUPA','TAPG','TKIM','TPIA','TRIN','TRUE','VKTR','WIFI','ZATA'
 ];
 
 const CFG = {
@@ -84,10 +85,6 @@ function getFraksi(price) {
 const roundFraksi = (price, fraksi) => Math.round(price / fraksi) * fraksi;
 
 // ── Fetch Yahoo Finance ───────────────────────────────────────────────────────
-// PATCH: Filter PER-BAR (bukan per-kolom) supaya array tetap sejajar.
-// Kalau ada satu field null di hari X, SELURUH bar hari X dibuang.
-// Ini mencegah harga high/low/close dari hari berbeda tercampur dalam satu
-// perhitungan indikator — yang sebelumnya bisa bikin sinyal palsu.
 async function fetchOHLCV(symbol, range = CFG.FETCH_RANGE) {
   const urls = [
     `https://query2.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=${range}`,
@@ -98,42 +95,12 @@ async function fetchOHLCV(symbol, range = CFG.FETCH_RANGE) {
       const res   = await axios.get(url, { headers: HEADERS, timeout: 15000 });
       const chart = res.data.chart?.result?.[0];
       if (!chart) continue;
-      const q = chart.indicators.quote[0];
-      if (!q || !q.close || !q.high || !q.low || !q.volume) continue;
-
-      const rawLen = q.close.length;
-      if (rawLen !== q.high.length || rawLen !== q.low.length || rawLen !== q.volume.length) {
-        // Array dari Yahoo tidak sejajar — skip URL ini, coba yang berikutnya
-        continue;
-      }
-
-      // Filter per-bar: buang bar kalau ada null di field manapun
-      const closes = [], highs = [], lows = [], volumes = [];
-      let droppedBars = 0;
-      for (let i = 0; i < rawLen; i++) {
-        const c = q.close[i], h = q.high[i], l = q.low[i], v = q.volume[i];
-        // Cek semua field harus valid angka (bukan null/undefined/NaN)
-        if (c == null || h == null || l == null || v == null
-            || !Number.isFinite(c) || !Number.isFinite(h)
-            || !Number.isFinite(l) || !Number.isFinite(v)) {
-          droppedBars++;
-          continue;
-        }
-        // Sanity check: high harus >= low, dan close harus di antara keduanya
-        if (h < l || c < l || c > h) {
-          droppedBars++;
-          continue;
-        }
-        closes.push(c); highs.push(h); lows.push(l); volumes.push(v);
-      }
-
+      const q       = chart.indicators.quote[0];
+      const closes  = q.close.filter(v => v != null);
+      const highs   = q.high.filter(v => v != null);
+      const lows    = q.low.filter(v => v != null);
+      const volumes = q.volume.filter(v => v != null);
       if (closes.length < 45) continue;
-
-      // Warning kalau banyak bar di-drop (indikasi data quality jelek)
-      if (droppedBars > 0 && droppedBars / rawLen > 0.05) {
-        console.log(`⚠  ${symbol}: ${droppedBars}/${rawLen} bar di-drop (${(droppedBars/rawLen*100).toFixed(1)}%) — data quality rendah`);
-      }
-
       const price     = chart.meta.regularMarketPrice || closes.at(-1);
       const prevClose = chart.meta.previousClose      || closes.at(-2);
       return { closes, highs, lows, volumes, price, prevClose };
@@ -409,15 +376,33 @@ function getSignal(stoch, macd) {
 }
 
 // ── Apply filters ke BUY signal (poin #1 #2 #3) ──────────────────────────────
+// BEAR EXCEPTION: strength 3 (SUPER — dual golden cross dari oversold) lolos
+// meskipun IHSG < SMA50. Rare event, high-quality setup.
 function applyBuyFilters(signal, filters) {
   if (signal.aksi !== 'BUY') return signal; // filter hanya berlaku untuk BUY
 
   const blocked = [];
-  if (!filters.ihsgBullish)  blocked.push('IHSG < SMA50');
+
+  // Hard filters (tidak ada exception)
   if (!filters.liquidityOk)  blocked.push(`Likuiditas ${filters.liquidityLabel}`);
   if (!filters.volumeOk)     blocked.push('Volume < 0.8× avg');
 
-  if (blocked.length === 0) return signal;
+  // IHSG regime: strength 3 (SUPER) dapat exception
+  if (!filters.ihsgBullish && signal.strength < 3) {
+    blocked.push('IHSG < SMA50');
+  }
+
+  if (blocked.length === 0) {
+    // Lolos semua filter — kalau via BEAR exception, tandai
+    if (!filters.ihsgBullish) {
+      return {
+        ...signal,
+        detail:      `⚡ BEAR OUTLIER (IHSG<SMA50) — ${signal.detail}`,
+        bearOutlier: true,
+      };
+    }
+    return signal;
+  }
 
   return {
     ...signal,
@@ -490,6 +475,7 @@ async function screenSimpleStock(ticker, ihsgData = null) {
     detail:    signal.detail,
     blockedBy: signal.blockedBy || [],
     setupOk:   signal.setupOk   || false,
+    bearOutlier: signal.bearOutlier || false,
     // Risk management
     atr:    atr ? round2(atr) : null,
     sl, slPct, tp, tpPct,
@@ -519,7 +505,10 @@ async function runSimpleScreener() {
   const ihsgData  = await fetchIHSGSimple();
   lastIHSGData    = ihsgData; // cache di module level
   const regimeMark = ihsgData.bullish ? '🟢' : '🔴';
-  console.log(`${regimeMark} IHSG: ${ihsgData.price || '?'} | SMA50: ${ihsgData.sma50 || '?'} | ${ihsgData.bullish ? 'BULLISH — filter aktif normal' : 'BEARISH — semua BUY diblokir'}`);
+  const regimeText = ihsgData.bullish
+    ? 'BULLISH — filter aktif normal'
+    : 'BEARISH — hanya SUPER signal (★★★) yang lolos sebagai BEAR OUTLIER';
+  console.log(`${regimeMark} IHSG: ${ihsgData.price || '?'} | SMA50: ${ihsgData.sma50 || '?'} | ${regimeText}`);
   console.log('─'.repeat(76));
 
   const results = {};

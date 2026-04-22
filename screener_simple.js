@@ -84,6 +84,10 @@ function getFraksi(price) {
 const roundFraksi = (price, fraksi) => Math.round(price / fraksi) * fraksi;
 
 // ── Fetch Yahoo Finance ───────────────────────────────────────────────────────
+// PATCH: Filter PER-BAR (bukan per-kolom) supaya array tetap sejajar.
+// Kalau ada satu field null di hari X, SELURUH bar hari X dibuang.
+// Ini mencegah harga high/low/close dari hari berbeda tercampur dalam satu
+// perhitungan indikator — yang sebelumnya bisa bikin sinyal palsu.
 async function fetchOHLCV(symbol, range = CFG.FETCH_RANGE) {
   const urls = [
     `https://query2.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=${range}`,
@@ -94,12 +98,42 @@ async function fetchOHLCV(symbol, range = CFG.FETCH_RANGE) {
       const res   = await axios.get(url, { headers: HEADERS, timeout: 15000 });
       const chart = res.data.chart?.result?.[0];
       if (!chart) continue;
-      const q       = chart.indicators.quote[0];
-      const closes  = q.close.filter(v => v != null);
-      const highs   = q.high.filter(v => v != null);
-      const lows    = q.low.filter(v => v != null);
-      const volumes = q.volume.filter(v => v != null);
+      const q = chart.indicators.quote[0];
+      if (!q || !q.close || !q.high || !q.low || !q.volume) continue;
+
+      const rawLen = q.close.length;
+      if (rawLen !== q.high.length || rawLen !== q.low.length || rawLen !== q.volume.length) {
+        // Array dari Yahoo tidak sejajar — skip URL ini, coba yang berikutnya
+        continue;
+      }
+
+      // Filter per-bar: buang bar kalau ada null di field manapun
+      const closes = [], highs = [], lows = [], volumes = [];
+      let droppedBars = 0;
+      for (let i = 0; i < rawLen; i++) {
+        const c = q.close[i], h = q.high[i], l = q.low[i], v = q.volume[i];
+        // Cek semua field harus valid angka (bukan null/undefined/NaN)
+        if (c == null || h == null || l == null || v == null
+            || !Number.isFinite(c) || !Number.isFinite(h)
+            || !Number.isFinite(l) || !Number.isFinite(v)) {
+          droppedBars++;
+          continue;
+        }
+        // Sanity check: high harus >= low, dan close harus di antara keduanya
+        if (h < l || c < l || c > h) {
+          droppedBars++;
+          continue;
+        }
+        closes.push(c); highs.push(h); lows.push(l); volumes.push(v);
+      }
+
       if (closes.length < 45) continue;
+
+      // Warning kalau banyak bar di-drop (indikasi data quality jelek)
+      if (droppedBars > 0 && droppedBars / rawLen > 0.05) {
+        console.log(`⚠  ${symbol}: ${droppedBars}/${rawLen} bar di-drop (${(droppedBars/rawLen*100).toFixed(1)}%) — data quality rendah`);
+      }
+
       const price     = chart.meta.regularMarketPrice || closes.at(-1);
       const prevClose = chart.meta.previousClose      || closes.at(-2);
       return { closes, highs, lows, volumes, price, prevClose };

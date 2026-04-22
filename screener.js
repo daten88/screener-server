@@ -263,7 +263,9 @@ async function runScreener(){
   console.log('\n' + '─'.repeat(78));
   console.log('⚠️  DOWNGRADE BY FILTER v2 (AKSI asli diturunkan karena gagal filter):');
   console.log('─'.repeat(78));
-  const downgraded = Object.values(results).filter(r => r.ok && r.downgraded);
+  const downgraded = Object.values(results).filter(r =>
+    r.ok && r.downgraded && r.aksi === 'HOLD'
+  );
 
   if(!downgraded.length){
     console.log('  Tidak ada downgrade.');

@@ -478,11 +478,11 @@ function applyFilters(ctx){
 
   if(sma200 !== null && !aboveSMA200){
     // Di bawah SMA200 = downtrend jangka panjang.
-    // Di BEAR regime: threshold diturunkan (hampir semua saham <SMA200 saat BEAR).
-    // Di BULL/NEUTRAL: tetap ketat — hanya PWR>=5 + BIG ACC.
-    const superStrong = regime === 'BEAR'
-      ? pwr >= 4 && (bdr === 'BIG ACC' || bdr === 'AKUM')
-      : pwr >= 5 && bdr === 'BIG ACC';
+    // BULL regime: market tailwind membantu, laggard masih punya peluang → PWR >= 4 cukup.
+    // NEUTRAL/BEAR: tidak ada tailwind → butuh konfirmasi PWR >= 4 + AKUM/BIG ACC.
+    const superStrong = regime === 'BULL'
+      ? pwr >= 4
+      : pwr >= 4 && (bdr === 'BIG ACC' || bdr === 'AKUM');
     if((finalAksi === 'HAKA' || finalAksi === 'BUY') && !superStrong){
       const prevAksi = finalAksi;
       if(finalAksi === 'HAKA') finalAksi = 'BUY';   // downgrade agresivitas

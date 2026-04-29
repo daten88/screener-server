@@ -521,7 +521,7 @@ function sRowClick(t){
   document.getElementById('sCSignal').innerHTML='<span style="color:'+col+';font-weight:600;font-size:12px">'+d.aksi+' — '+d.label+'</span>';
   var tvUrl='https://s.tradingview.com/widgetembed/?frameElementId=tv_s_'+t+'&symbol=IDX%3A'+t
     +'&interval=D&hidesidetoolbar=0&saveimage=0'
-    +'&studies=STOCH%4011%2C5%2C5%2C0%2C3%2C0%1FMACD%40tv-basicstudies%1FVolume%40tv-basicstudies'
+    +'&studies=STOCH%4010%2C5%2C5%2C0%2C3%2C0%1FMACD%40tv-basicstudies'
     +'&theme=dark&style=1&timezone=Asia%2FJakarta&withdateranges=1&locale=id';
   document.getElementById('sCTvWrap').innerHTML='<iframe src="'+tvUrl+'" allowtransparency="true" frameborder="0" scrolling="no"></iframe>';
   var p=document.getElementById('sChartPanel'); p.style.display='block'; p.scrollIntoView({behavior:'smooth',block:'nearest'});
@@ -705,7 +705,7 @@ function showChart(t){
     document.getElementById('cTpSl').innerHTML='<span class="tp-vc">TP '+(d.tp?d.tp.toLocaleString('id-ID'):'—')+'</span> &nbsp; <span class="sl-vc">SL '+(d.sl?d.sl.toLocaleString('id-ID'):'—')+'</span>'+rrTxt;
     document.getElementById('cWarn').innerHTML=d.warnings&&d.warnings.length?'⚠ '+d.warnings.join(' · '):'';
   }
-  var tvUrl='https://s.tradingview.com/widgetembed/?frameElementId=tv_'+t+'&symbol=IDX%3A'+t+'&interval=D&hidesidetoolbar=0&saveimage=0&studies=RSI%40tv-basicstudies%1FMACD%40tv-basicstudies%1FVolume%40tv-basicstudies&theme=dark&style=1&timezone=Asia%2FJakarta&withdateranges=1&locale=id';
+  var tvUrl='https://s.tradingview.com/widgetembed/?frameElementId=tv_'+t+'&symbol=IDX%3A'+t+'&interval=D&hidesidetoolbar=0&saveimage=0&studies=STOCH%4010%2C5%2C5%2C0%2C3%2C0%1FRSI%40tv-basicstudies%1FMACD%40tv-basicstudies%1FVolume%40tv-basicstudies&theme=dark&style=1&timezone=Asia%2FJakarta&withdateranges=1&locale=id';
   document.getElementById('tvWrap').innerHTML='<iframe src="'+tvUrl+'" allowtransparency="true" frameborder="0" scrolling="no"></iframe>';
   var panel=document.getElementById('chartPanel');panel.style.display='block';panel.scrollIntoView({behavior:'smooth',block:'nearest'});
 }

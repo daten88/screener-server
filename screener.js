@@ -12,13 +12,15 @@ const {
   calculateRegime, applyFilters
 } = require('./indicators');
 
-const WATCHLIST = ['AADI','AHAP','ARCI','ASPR','ATAP','BAIK','BBRI','BBTN','BFIN','BGTG',
-'BIPI','BMRI','BNBR','BRMS','BRPT','BULL','BUMI','BUVA','BWPT','COCO',
-'CTTH','CUAN','DATA','DEWA','DKFT','ELSA','EMAS','EMTK','ENRG','ESIP',
-'ESSA','FORE','GOTO','GTSI','HUMI','ICON','IMPC','INCO','INDY','JPFA',
-'KETR','KING','KPIG','MBMA','MBSS','MDKA','MINA','NINE','PADA','PADI',
-'PANI','PPRE','PSAT','PSKT','PTPP','PYFA','RAJA','SINI','SOFA','SUPA',
-'TAPG','TKIM','TPIA','TRIN','TRUE','VKTR','WIFI','WMUU','ZATA'];
+const WATCHLIST = ['AADI','ADRO','AHAP','ARCI','ASPR','ATAP','BAIK','BBRI','BBTN','BBYB',
+'BFIN','BGTG','BIPI','BMRI','BNBR','BRMS','BRPT','BULL','BUMI','BUVA',
+'BWPT','CASH','COCO','CPRO','CTTH','CUAN','DATA','DEWA','DKFT','ELSA',
+'ELTY','EMAS','EMTK','ENRG','ESIP','ESSA','FORE','GOTO','GTSI','HUMI',
+'ICON','IMPC','INCO','INDY','JGLE','JKON','JPFA','KBLV','KETR','KING',
+'KPIG','LEAD','MBMA','MBSS','MDKA','MINA','NINE','PACK','PADA','PADI',
+'PANI','PPRE','PSAT','PSKT','PTPP','PYFA','RAJA','SINI','SOCI','SOFA',
+'SUPA','TAPG','TKIM','TPIA','TOBA','TRIN','TRUE','VKTR','WIFI','WMUU',
+'ZATA'];
 
 // ── Config ──────────────────────────────────────────────────────────────
 const MIN_LIQUIDITY_IDR = 5_000_000_000;  // Rp 5 miliar/hari avg value

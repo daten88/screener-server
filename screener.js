@@ -12,7 +12,7 @@ const {
   calculateRegime, applyFilters
 } = require('./indicators');
 
-const WATCHLIST = ['AADI','ADRO','AHAP','ARCI','ASPR','ATAP','AYAM','BAIK','BBRI','BBTN',
+const WATCHLIST = ['ADRO','AHAP','ARCI','ASPR','ATAP','AYAM','BAIK','BBRI','BBTN',
 'BBYB','BFIN','BGTG','BIPI','BMRI','BNBR','BRMS','BRPT','BULL','BUMI',
 'BUVA','BWPT','CARE','CASH','COAL','COCO','CPRO','CTTH','CUAN','DATA',
 'DEWA','DKFT','ELSA','ELTY','EMAS','EMTK','ENRG','ESIP','ESSA','FORE',

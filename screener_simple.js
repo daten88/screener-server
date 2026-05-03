@@ -30,15 +30,15 @@ const axios = require('axios');
 const TI    = require('technicalindicators'); // sama persis seperti complex screener
 
 // ── Config ────────────────────────────────────────────────────────────────────
-const WATCHLIST = ['AADI','ADRO','AHAP','ARCI','ASPR','ATAP','AYAM','BAIK','BBRI','BBTN',
+const WATCHLIST = ['AADI','AHAP','ARCI','ASPR','ATAP','AYAM','BAIK','BBRI','BBTN',
 'BBYB','BFIN','BGTG','BIPI','BMRI','BNBR','BRMS','BRPT','BULL','BUMI',
 'BUVA','BWPT','CARE','CASH','COAL','COCO','CPRO','CTTH','CUAN','DATA',
-'DEWA','DKFT','ELSA','ELTY','EMAS','EMTK','ENRG','ESIP','ESSA','FORE',
-'GOTO','GTSI','HUMI','ICON','IMPC','INCO','INDY','JGLE','JKON','JMAS',
-'JPFA','KBLV','KETR','KING','KPIG','LEAD','MAIN','MBMA','MBSS','MDKA',
+'DEWA','DKFT','ELSA','ELTY','EMAS','ENRG','ESIP','ESSA','FORE',
+'GOTO','GTSI','HUMI','ICON','IMPC','INDY','JMAS',
+'JPFA','KETR','KING','KPIG','MAIN','MBMA','MBSS','MDKA',
 'MINA','NAYZ','NINE','PADA','PADI','PANI','PPRE','PSAT','PSKT',
 'PTPP','PYFA','RAJA','RLCO','SINI','SOCI','SOFA','SUPA','TAPG','TKIM','TPIA',
-'TOBA','TRIN','TRUE','VKTR','WIFI','WMUU','YELO','ZATA'
+'TRIN','TRUE','VKTR','WIFI','WMUU','YELO','ZATA'
 ];
 
 const CFG = {

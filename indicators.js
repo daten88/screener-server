@@ -251,13 +251,11 @@ function calculateAKSI(rsi, macd, macdSig, rvol, chg, pwr, fase, goldenCross, de
   // ══════════════════════════════════════════════════════════════
 
   // Jalur M1: ARA / gap up besar
-  // CHG >= 8% + RVOL >= 1.5 + RSI < 75
-  // HAKA kalau bull zone + MACD bull (contoh: BRPT +24.7% bull zone)
-  // BUY kalau bear zone atau MACD belum bull
-  if(chg >= 8 && rvol >= 1.5 && rsi < 75){
-    if(bullZone && bull) return 'HAKA';
+  // CHG >= 8% + RVOL >= 1.5 + RSI < 75 → selalu BUY (bukan HAKA)
+  // Downgrade dari HAKA karena ARA bisa exhaustion move
+  // Trader tetap masuk tapi dengan SL ketat
+  if(chg >= 8 && rvol >= 1.5 && rsi < 75)
     return 'BUY';
-  }
 
   // Jalur M2: Momentum normal
   // CHG >= 4% + RVOL >= 1.5 + RSI 40-75 + MACD bull + bukan BREAKDOWN

@@ -232,7 +232,7 @@ function calculateFASE(rsi, macd, macdSig, chg, wick, hist){
 }
 
 // ── AKSI ──────────────────────────────────────────────────────────────────
-// v6: Momentum First
+// v6.1: Momentum First — fix M1/M2 HAKA vs BUY
 //
 // URUTAN PRIORITAS:
 // 0. Jalur M1: ARA/gap up — CHG >= 8% + RVOL >= 1.5 + RSI < 75 → BUY
@@ -251,17 +251,22 @@ function calculateAKSI(rsi, macd, macdSig, rvol, chg, pwr, fase, goldenCross, de
   // ══════════════════════════════════════════════════════════════
 
   // Jalur M1: ARA / gap up besar
-  // CHG >= 8% + RVOL >= 1.5 + RSI < 75 → BUY langsung
-  // Override semua kondisi termasuk death cross
-  // Mencegah kasus BRPT +24.7% dapat SELL
-  if(chg >= 8 && rvol >= 1.5 && rsi < 75)
+  // CHG >= 8% + RVOL >= 1.5 + RSI < 75
+  // HAKA kalau bull zone + MACD bull (contoh: BRPT +24.7% bull zone)
+  // BUY kalau bear zone atau MACD belum bull
+  if(chg >= 8 && rvol >= 1.5 && rsi < 75){
+    if(bullZone && bull) return 'HAKA';
     return 'BUY';
+  }
 
   // Jalur M2: Momentum normal
-  // CHG >= 3% + RVOL >= 1.5 + RSI 40-75 + bukan BREAKDOWN → BUY
-  // Tangkap momentum sebelum MACD confirm
-  if(chg >= 3 && rvol >= 1.5 && rsi >= 40 && rsi < 75 && fase !== 'BREAKDOWN')
+  // CHG >= 3% + RVOL >= 1.5 + RSI 40-75 + bukan BREAKDOWN
+  // HAKA kalau bull zone + MACD bull
+  // BUY kalau bear zone atau MACD belum bull
+  if(chg >= 3 && rvol >= 1.5 && rsi >= 40 && rsi < 75 && fase !== 'BREAKDOWN'){
+    if(bullZone && bull) return 'HAKA';
     return 'BUY';
+  }
 
   // ══════════════════════════════════════════════════════════════
   //  LOGIKA TEKNIKAL EXISTING

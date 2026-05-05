@@ -53,9 +53,12 @@ async function refreshSimple() {
   }
 }
 
-// ── Cron: setiap 2 menit jam bursa, offset 1 menit antar screener ─────────
-cron.schedule('*/2 9-15 * * 1-5',    refreshAll,    { timezone: 'Asia/Jakarta' });
-cron.schedule('1-59/2 9-15 * * 1-5', refreshSimple, { timezone: 'Asia/Jakarta' });
+
+// ── Cron: setiap 2 menit jam bursa (09:00–16:00 WIB) ─────────────────────
+// '9-16' = aktif jam 09:xx sampai 16:xx → mencakup penuh market IDX
+// offset 1 menit antara complex & simple supaya tidak tabrakan fetch Yahoo
+cron.schedule('*/2 9-16 * * 1-5',    refreshAll,    { timezone: 'Asia/Jakarta' });
+cron.schedule('1-59/2 9-16 * * 1-5', refreshSimple, { timezone: 'Asia/Jakarta' });
 
 // ═══ ENDPOINTS: Complex Screener (v2) ════════════════════════════════════════
 
@@ -98,7 +101,7 @@ app.get('/screener/:ticker', async (req, res) => {
 app.get('/data-simple', (req, res) => {
   res.json({
     data:      simpleResults,
-    ihsg:      getLastIHSG(),          // ← kirim IHSG simple ke frontend
+    ihsg:      getLastIHSG(),
     portfolio: parseInt(process.env.PORTFOLIO_IDR || '100000000'),
     ts:        Date.now(),
     lastScan:  simpleLastScan,
@@ -107,7 +110,6 @@ app.get('/data-simple', (req, res) => {
 
 app.get('/screener-simple/:ticker', async (req, res) => {
   try {
-    // Pakai IHSG yang di-cache oleh runSimpleScreener, kalau belum ada fetch baru
     const ihsgData = getLastIHSG()?.price ? getLastIHSG() : null;
     const result = await screenSimpleStock(req.params.ticker.toUpperCase(), ihsgData);
     if (!result) return res.status(404).json({ error: 'Data tidak ditemukan' });

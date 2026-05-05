@@ -10,7 +10,7 @@ const TI = require('technicalindicators');
 //  ✅ calculateAKSI: tambah jalur momentum M1 & M2 sebelum logika
 //     teknikal existing, plus SELL protection
 //     - M1: CHG >= 8% + RVOL >= 1.5 + RSI < 75 → BUY (override)
-//     - M2: CHG >= 3% + RVOL >= 1.5 + RSI 40-75 + bukan BREAKDOWN → BUY
+//     - M2: CHG >= 4% + RVOL >= 1.5 + RSI 40-75 + MACD bull + bukan BREAKDOWN → HAKA/BUY
 //     - SELL Protection: batalkan SELL kalau CHG >= 5% + RVOL >= 1.2
 //  ✅ Semua fungsi lain tidak berubah (backward compatible)
 // ════════════════════════════════════════════════════════════════
@@ -260,11 +260,11 @@ function calculateAKSI(rsi, macd, macdSig, rvol, chg, pwr, fase, goldenCross, de
   }
 
   // Jalur M2: Momentum normal
-  // CHG >= 3% + RVOL >= 1.5 + RSI 40-75 + bukan BREAKDOWN
-  // HAKA kalau bull zone + MACD bull
-  // BUY kalau bear zone atau MACD belum bull
-  if(chg >= 3 && rvol >= 1.5 && rsi >= 40 && rsi < 75 && fase !== 'BREAKDOWN'){
-    if(bullZone && bull) return 'HAKA';
+  // CHG >= 4% + RVOL >= 1.5 + RSI 40-75 + MACD bull + bukan BREAKDOWN
+  // Filter MACD bull mencegah dead cat bounce di BEAR market
+  // HAKA kalau bull zone, BUY kalau bear zone
+  if(chg >= 4 && rvol >= 1.5 && rsi >= 40 && rsi < 75 && bull && fase !== 'BREAKDOWN'){
+    if(bullZone) return 'HAKA';
     return 'BUY';
   }
 

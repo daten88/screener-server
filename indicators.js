@@ -285,7 +285,9 @@ function calculateAKSI(rsi, macd, macdSig, rvol, chg, pwr, fase, goldenCross, de
   if(bdr === 'DIST' && !bull)           return 'SELL';
   if(rsi > 70 && !bull)                 return 'SELL';
   if(fase === 'BREAKDOWN')              return 'SELL';
-  if(pwr <= 2 && !bull && rsi > 60)     return 'SELL';
+  // v6.2: diperketat dari pwr<=2,rsi>60 → pwr<=1,rsi>65
+  // mencegah false SELL pada saham RVOL rendah seperti VKTR
+  if(pwr <= 1 && !bull && rsi > 65)     return 'SELL';
 
   // ── SELL Protection ───────────────────────────────────────────
   // Semua kondisi SELL di atas sudah dijalankan.

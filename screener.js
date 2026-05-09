@@ -12,15 +12,18 @@ const {
   calculateRegime, applyFilters
 } = require('./indicators');
 
-const WATCHLIST = ['AADI','AHAP','ARCI','ASPR','ATAP','AYAM','BAIK','BBRI','BBTN',
-'BBYB','BFIN','BGTG','BIPI','BMRI','BNBR','BRMS','BRPT','BULL','BUMI',
-'BUVA','BWPT','CARE','CASH','COAL','COCO','CPRO','CTTH','CUAN','DATA',
-'DEWA','DKFT','ELSA','ELTY','EMAS','ENRG','ESIP','ESSA','FORE',
-'GOTO','GTSI','HUMI','ICON','IMPC','INDY','JMAS',
-'JPFA','KETR','KING','KPIG','MAIN','MBMA','MBSS','MDKA',
-'MINA','NAYZ','NINE','PADA','PADI','PANI','PPRE','PSAT','PSKT',
-'PTPP','PYFA','RAJA','RLCO','SINI','SOCI','SOFA','SUPA','TAPG','TKIM','TPIA',
-'TRIN','TRUE','VKTR','WIFI','WMUU','YELO','ZATA'];
+const WATCHLIST = ['AADI','ADRO','AHAP','ARCI','ASHA','ASLI','ASPR','ATAP','AYAM','BAIK',
+'BBRI','BBTN','BBYB','BDMN','BFIN','BGTG','BIPI','BMRI','BMTR','BNBR',
+'BRMS','BRPT','BULL','BUMI','BUVA','BWPT','CARE','CASH','COAL','COCO',
+'COIN','CPRO','CTTH','CUAN','DATA','DEFI','DEWA','DKFT','DKHH','DOOH',
+'DPUM','ELSA','ELTY','EMAS','EMTK','ENRG','ENZO','ESIP','ESSA','FORE',
+'GOTO','GTSI','HALO','HUMI','IBOS','ICON','IMPC','INCF','INCO','INDY',
+'INKP','JGLE','JKON','JMAS','JPFA','KBLV','KETR','KING','KLAS','KLBF',
+'KOTA','KPIG','KRYA','LEAD','MAIN','MBMA','MBSS','MDIA','MDKA','MEDC',
+'MEDS','MINA','NAYZ','NINE','OASA','PACK','PADA','PADI','PANI','PPRE',
+'PSAT','PSKT','PTPP','PYFA','RAJA','RLCO','RMKE','SINI','SOCI','SOFA',
+'SSIA','SUPA','TAPG','TKIM','TOBA','TPIA','TRIN','TRUE','UNVR','VKTR',
+'WBSA','WIFI','WMUU','YELO','ZATA'];
 
 // ── Config ──────────────────────────────────────────────────────────────
 const MIN_LIQUIDITY_IDR = 5_000_000_000;  // Rp 5 miliar/hari avg value

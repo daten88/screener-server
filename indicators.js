@@ -1,26 +1,34 @@
 const TI = require('technicalindicators');
 
 // ════════════════════════════════════════════════════════════════
-//  indicators.js — v6 MOMENTUM FIRST
+//  indicators.js — v7 FINAL
 //
-//  CHANGELOG v6:
-//  ✅ calculateFASE: tambah gap up detection — CHG >= 8% langsung
-//     BREAKOUT tanpa perlu MACD bull
-//  ✅ calculatePWR: tambah boost CHG >= 8% dapat +2 PWR tambahan
-//  ✅ calculateAKSI: tambah jalur momentum M1 & M2 sebelum logika
-//     teknikal existing, plus SELL protection
-//     - M1: CHG >= 8% + RVOL >= 1.5 + RSI < 75 → BUY (override)
-//     - M2: CHG >= 4% + RVOL >= 1.5 + RSI 40-75 + MACD bull + bukan BREAKDOWN → HAKA/BUY
-//     - SELL Protection: batalkan SELL kalau CHG >= 5% + RVOL >= 1.2
-//  ✅ Semua fungsi lain tidak berubah (backward compatible)
+//  CHANGELOG v7:
+//  ✅ calculateAKSI: rollback ke v6 — HAKA tetap ada (internal only)
+//     HAKA dipakai oleh inferPineStatus, TIDAK ditampilkan langsung
+//  ✅ inferPineStatus: simulasi gate Pine Script v7.2
+//     (rr >= 1.0 AND rsi < 75 AND aksi === 'HAKA')
+//  ✅ formatScreenerOutput: konversi ke categories untuk display
+//     MISSED_HAKA | LIMIT_SETUP | WATCH | SKIP
+//  ✅ applyFilters v3.1: tidak ada downgrade aksi
+//     hanya recommendation + confidence (HIGH/MEDIUM/LOW/CRITICAL)
+//  ✅ Semua fungsi lain tidak berubah
+//
+//  Arsitektur:
+//  calculateAKSI → HAKA/BUY/SELL/HOLD (internal)
+//       ↓
+//  inferPineStatus → { pineSent, pineReason }
+//       ↓
+//  formatScreenerOutput → { category, actionText, levels }
+//       ↓
+//  Web screener tampilkan categories (BUKAN HAKA)
+//  Telegram bot tetap terima HAKA dari TradingView Pine Script
 // ════════════════════════════════════════════════════════════════
 
-// ── Helper: guard NaN / Infinity ──────────────────────────────────────────
 function safeNum(x, def=0){
   return Number.isFinite(x) ? x : def;
 }
 
-// ── Helper: rata-rata array ───────────────────────────────────────────────
 function avg(arr){
   if(!Array.isArray(arr) || arr.length === 0) return 0;
   return arr.reduce((a,b) => a+b, 0) / arr.length;
@@ -50,38 +58,30 @@ function calculateMACD(closes){
       fastPeriod: 12, slowPeriod: 26, signalPeriod: 9,
       SimpleMAOscillator: false, SimpleMASignal: false
     });
-
     if(!result.length) return {
       macd:0, signal:0, hist:0, histPrev:0, macdPrev:0, signalPrev:0,
       goldenCross:false, deathCross:false, zone:'BEAR_ZONE'
     };
-
     const last = result.at(-1);
     const prev = result.length >= 2 ? result.at(-2) : last;
-
     const macdNow  = safeNum(parseFloat((last.MACD      ?? 0).toFixed(2)));
     const sigNow   = safeNum(parseFloat((last.signal    ?? 0).toFixed(2)));
     const histNow  = safeNum(parseFloat((last.histogram ?? 0).toFixed(2)));
     const macdPrev = safeNum(parseFloat((prev.MACD      ?? 0).toFixed(2)));
     const sigPrev  = safeNum(parseFloat((prev.signal    ?? 0).toFixed(2)));
     const histPrev = safeNum(parseFloat((prev.histogram ?? 0).toFixed(2)));
-
     const goldenCross = macdPrev < sigPrev && macdNow > sigNow;
     const deathCross  = macdPrev > sigPrev && macdNow < sigNow;
-
     let zone;
     if     (macdPrev < 0 && macdNow >= 0) zone = 'ZERO_CROSS_UP';
     else if(macdPrev > 0 && macdNow <= 0) zone = 'ZERO_CROSS_DOWN';
     else if(macdNow > 0)                  zone = 'BULL_ZONE';
     else                                   zone = 'BEAR_ZONE';
-
-    return { macd:macdNow, signal:sigNow, hist:histNow, histPrev, macdPrev, signalPrev:sigPrev, goldenCross, deathCross, zone };
-
+    return { macd:macdNow, signal:sigNow, hist:histNow, histPrev,
+             macdPrev, signalPrev:sigPrev, goldenCross, deathCross, zone };
   }catch{
-    return {
-      macd:0, signal:0, hist:0, histPrev:0, macdPrev:0, signalPrev:0,
-      goldenCross:false, deathCross:false, zone:'BEAR_ZONE'
-    };
+    return { macd:0, signal:0, hist:0, histPrev:0, macdPrev:0, signalPrev:0,
+             goldenCross:false, deathCross:false, zone:'BEAR_ZONE' };
   }
 }
 
@@ -131,13 +131,11 @@ function calculateATR(highs, lows, closes, period=14){
   return safeNum(avg(trs.slice(-period)));
 }
 
-// ── CHG% ──────────────────────────────────────────────────────────────────
 function calculateCHG(price, prevClose){
   if(!prevClose) return 0;
   return safeNum(parseFloat(((price - prevClose) / prevClose * 100).toFixed(2)));
 }
 
-// ── WICK ──────────────────────────────────────────────────────────────────
 function calculateWick(highs, lows, closes){
   const h  = highs.at(-1)  || 0;
   const l  = lows.at(-1)   || 0;
@@ -150,12 +148,9 @@ function calculateWick(highs, lows, closes){
 function calculateBDR(volumes, closes, rvol, rsi, wick){
   const n    = 20;
   if(closes.length < n || volumes.length < n) return { label:'', score:0 };
-
   const rv   = volumes.slice(-n);
   const avgV = avg(rv);
-
   let bigUp = 0, bigDown = 0;
-
   for(let i=1; i<rv.length; i++){
     const volBesar = rv[i] > avgV * 1.5;
     const naik     = closes[closes.length - n + i] >  closes[closes.length - n + i - 1];
@@ -163,66 +158,47 @@ function calculateBDR(volumes, closes, rvol, rsi, wick){
     if(volBesar && naik)  bigUp++;
     if(volBesar && turun) bigDown++;
   }
-
   const c1 = closes.at(-1);
   const c2 = closes.at(-2);
   const c3 = closes.at(-3);
-
   if(rvol > 2   && bigUp >= 4 && c1 >= c2 && c2 >= c3) return { label:'BIG ACC', score: 3 };
   if(rvol > 1.4 && bigUp >= 2)                          return { label:'AKUM',    score: 2 };
-
   if(rvol > 1.5 && bigDown >= 2 && c1 < c2 && rsi < 40){
     if(wick > 25) return { label:'AKUM',  score: 2 };
     return          { label:'AKUM?', score: 1 };
   }
   if(rvol > 1.5 && bigDown >= 2 && c1 < c2 && rsi < 45 && wick > 30) return { label:'AKUM?', score: 1 };
-
   if(rvol > 1.5 && bigDown >= 3 && c1 < c2 && rsi > 55) return { label:'DIST', score:-2 };
   if(rvol > 1.2 && bigDown >= 2 && c1 < c2 && c2 < c3 && rsi > 50) return { label:'DIST', score:-2 };
-
   return { label:'', score:0 };
 }
 
 // ── PWR ───────────────────────────────────────────────────────────────────
-// v6: tambah boost untuk CHG >= 8% (momentum kuat)
 function calculatePWR(rsi, macd, macdSig, rvol, chg, hist, goldenCross, deathCross){
   let s = 0;
-
   if(rsi < 30)        s += 2;
   else if(rsi < 45)   s += 1;
   else if(rsi > 75)   s -= 2;
   else if(rsi > 65)   s -= 1;
-
   if(macd > macdSig)  s += 1;
   if(hist > 0)        s += 1;
-
   if(rvol > 2.5)      s += 2;
   else if(rvol > 1.5) s += 1;
   else if(rvol < 0.6) s -= 1;
-
-  // ✅ v6: CHG >= 8% dapat +2 (momentum kuat), bukan +1 lagi
   if(chg >= 8)        s += 2;
   else if(chg > 3)    s += 1;
   else if(chg < -4)   s -= 2;
   else if(chg < -2)   s -= 1;
-
   if(goldenCross)     s += 2;
   if(deathCross)      s -= 2;
-
   return Math.min(5, Math.max(1, s));
 }
 
 // ── FASE ──────────────────────────────────────────────────────────────────
-// v6: tambah deteksi gap up besar tanpa perlu MACD bull
 function calculateFASE(rsi, macd, macdSig, chg, wick, hist){
   const bull   = macd > macdSig;
   const rising = hist > 0;
-
-  // ✅ v6 NEW: Gap up besar langsung BREAKOUT tanpa MACD
-  // Mencegah FASE SIDEWAYS saat saham ARA seperti BRPT +24.7%
   if(chg >= 8 && rsi < 78)                              return 'BREAKOUT';
-
-  // Kondisi existing
   if(chg > 3   && bull && rsi > 50 && rsi < 78)         return 'BREAKOUT';
   if(wick > 20 && rsi < 52 && bull)                      return 'REBOUND';
   if(rsi < 36  && bull && rising)                        return 'REBOUND';
@@ -231,46 +207,23 @@ function calculateFASE(rsi, macd, macdSig, chg, wick, hist){
   return 'SIDEWAYS';
 }
 
-// ── AKSI ──────────────────────────────────────────────────────────────────
-// v6.1: Momentum First — fix M1/M2 HAKA vs BUY
-//
-// URUTAN PRIORITAS:
-// 0. Jalur M1: ARA/gap up — CHG >= 8% + RVOL >= 1.5 + RSI < 75 → BUY
-// 1. Jalur M2: Momentum normal — CHG >= 3% + RVOL >= 1.5 + RSI 40-75 → BUY
-// 2. Logika teknikal existing (death cross, DIST, dll)
-// 3. SELL Protection — batalkan SELL kalau momentum kuat
-// 4. Jalur BUY/HAKA teknikal existing
+// ── AKSI v6 (tidak berubah) ───────────────────────────────────────────────
+// HAKA tetap ada untuk keperluan internal inferPineStatus
+// Web screener TIDAK menampilkan 'HAKA' langsung ke user
+// formatScreenerOutput yang mengkonversi ke categories
 function calculateAKSI(rsi, macd, macdSig, rvol, chg, pwr, fase, goldenCross, deathCross, bdr, zone){
   const bull     = macd > macdSig;
   const bullZone = zone === 'BULL_ZONE' || zone === 'ZERO_CROSS_UP';
   const bearZone = zone === 'BEAR_ZONE' || zone === 'ZERO_CROSS_DOWN';
 
-  // ══════════════════════════════════════════════════════════════
-  //  JALUR MOMENTUM — PRIORITAS TERTINGGI
-  //  Dicek SEBELUM semua kondisi teknikal
-  // ══════════════════════════════════════════════════════════════
-
-  // Jalur M1: ARA / gap up besar
-  // CHG >= 8% + RVOL >= 1.5 + RSI < 75 → selalu BUY (bukan HAKA)
-  // Downgrade dari HAKA karena ARA bisa exhaustion move
-  // Trader tetap masuk tapi dengan SL ketat
   if(chg >= 8 && rvol >= 1.5 && rsi < 75)
     return 'BUY';
 
-  // Jalur M2: Momentum normal
-  // CHG >= 4% + RVOL >= 1.5 + RSI 40-75 + MACD bull + bukan BREAKDOWN
-  // Filter MACD bull mencegah dead cat bounce di BEAR market
-  // HAKA kalau bull zone, BUY kalau bear zone
   if(chg >= 4 && rvol >= 1.5 && rsi >= 40 && rsi < 75 && bull && fase !== 'BREAKDOWN'){
     if(bullZone) return 'HAKA';
     return 'BUY';
   }
 
-  // ══════════════════════════════════════════════════════════════
-  //  LOGIKA TEKNIKAL EXISTING
-  // ══════════════════════════════════════════════════════════════
-
-  // Death cross + bull zone (fix v5)
   if(deathCross && bullZone){
     if(fase === 'BREAKDOWN') return 'SELL';
     if(fase === 'SIDEWAYS'){
@@ -285,17 +238,10 @@ function calculateAKSI(rsi, macd, macdSig, rvol, chg, pwr, fase, goldenCross, de
   if(bdr === 'DIST' && !bull)           return 'SELL';
   if(rsi > 70 && !bull)                 return 'SELL';
   if(fase === 'BREAKDOWN')              return 'SELL';
-  // v6.2: diperketat dari pwr<=2,rsi>60 → pwr<=1,rsi>65
-  // mencegah false SELL pada saham RVOL rendah seperti VKTR
   if(pwr <= 1 && !bull && rsi > 65)     return 'SELL';
 
-  // ── SELL Protection ───────────────────────────────────────────
-  // Semua kondisi SELL di atas sudah dijalankan.
-  // Kalau sampai di sini berarti tidak ada SELL.
-  // (Jalur M1 dan M2 di atas sudah handle override SELL)
-
-  if(bdr === 'DIST' && bullZone)                 return 'HOLD';
-  if(goldenCross && bearZone && bdr === 'DIST')   return 'SELL';
+  if(bdr === 'DIST' && bullZone)                return 'HOLD';
+  if(goldenCross && bearZone && bdr === 'DIST')  return 'SELL';
 
   if(goldenCross && bull && rvol > 1.0)
     return bearZone ? 'BUY' : 'HAKA';
@@ -318,6 +264,259 @@ function calculateAKSI(rsi, macd, macdSig, rvol, chg, pwr, fase, goldenCross, de
   return 'HOLD';
 }
 
+// ── INFER PINE STATUS ─────────────────────────────────────────────────────
+// Simulasi gate Pine Script v7.2:
+// HAKA alert dikirim kalau: aksi === 'HAKA' AND rr >= 1.0 AND rsi < 75
+function inferPineStatus(aksi, price, tp, sl, rsi){
+  const rr      = calculateRR(price, tp, sl, 'BUY');
+  const reasons = [];
+
+  if(aksi !== 'HAKA') reasons.push('Bukan setup HAKA');
+  if(rr < 1.0)        reasons.push(`R:R ${rr} < 1.0`);
+  if(rsi >= 75)       reasons.push(`RSI ${rsi} >= 75`);
+
+  const sent = reasons.length === 0;
+
+  return {
+    pineSent  : sent,
+    pineReason: sent ? null : reasons.join(' | '),
+    rrE1      : rr
+  };
+}
+
+// ── FORMAT SCREENER OUTPUT ────────────────────────────────────────────────
+// Konversi aksi internal ke categories yang actionable untuk web screener
+// Tidak pernah tampilkan 'HAKA' ke user — hanya categories di bawah
+function formatScreenerOutput(ctx){
+  const {
+    ticker, price, tp, sl, e1, e2, e3,
+    pwr, bdr, fase, chg, rvol, rsi,
+    liquidityStatus, regime,
+    aksi,          // dari calculateAKSI (internal)
+    filterResult   // dari applyFilters
+  } = ctx;
+
+  // 1. Simulasi Pine gate
+  const pine  = inferPineStatus(aksi, price, tp, sl, rsi);
+
+  // 2. R:R di setiap level entry
+  const rrE1  = pine.rrE1;
+  const rrE2  = e2 ? calculateRR(e2, tp, sl, 'BUY') : null;
+  const rrE3  = e3 ? calculateRR(e3, tp, sl, 'BUY') : null;
+
+  // 3. Category + actionText
+  let category, actionText;
+
+  if(!liquidityStatus.ok){
+    // Likuiditas tidak memadai — skip apapun
+    category   = 'SKIP';
+    actionText = `Skip — likuiditas ${liquidityStatus.label}`;
+
+  } else if(aksi === 'SELL'){
+    // Sinyal SELL dari calculateAKSI
+    category   = 'SELL';
+    actionText = 'Setup bearish — hindari BUY, pertimbangkan exit posisi';
+
+  } else if(pine.pineSent && chg <= 5){
+    // Pine sudah kirim HAKA hari ini, harga belum jauh
+    category   = 'MISSED_HAKA';
+    actionText = `HAKA sudah terkirim. ${rrE2 ? `Masih bisa antri E2 @ ${e2} (R:R ${rrE2})` : 'Cek apakah masih layak entry.'}`;
+
+  } else if(pine.pineSent && chg > 5){
+    // Pine kirim HAKA tapi harga sudah naik jauh
+    category   = 'WATCH';
+    actionText = `HAKA terkirim tapi harga sudah naik ${chg}%. Tunggu pullback ke E2/E3.`;
+
+  } else if(!pine.pineSent && (rrE3 && rrE3 >= 1.5)){
+    // Pine skip (R:R kurang di E1) tapi E3 menarik
+    category   = 'LIMIT_SETUP';
+    actionText = `Pine skip (${pine.pineReason}). Antri E3 @ ${e3} untuk R:R ${rrE3}.`;
+
+  } else if(!pine.pineSent && (rrE2 && rrE2 >= 1.0)){
+    // Pine skip tapi E2 masih reasonable
+    category   = 'LIMIT_SETUP';
+    actionText = `Pine skip (${pine.pineReason}). Pertimbangkan E2 @ ${e2} (R:R ${rrE2}).`;
+
+  } else if(aksi === 'BUY'){
+    // BUY setup tapi tidak memenuhi HAKA criteria
+    category   = 'WATCH';
+    actionText = 'Setup BUY tapi belum HAKA quality. Pantau konfirmasi lanjutan.';
+
+  } else {
+    // HOLD atau tidak ada setup
+    category   = 'WATCH';
+    actionText = 'Belum ada setup actionable. Pantau.';
+  }
+
+  // 4. Context warnings
+  const warnings = filterResult ? filterResult.warnings : [];
+  const confidence   = filterResult ? filterResult.confidence   : 'HIGH';
+  const recommendation = filterResult ? filterResult.recommendation : '';
+
+  return {
+    ticker,
+    timestamp : new Date().toISOString(),
+
+    // Display (bukan sinyal raw)
+    category,     // MISSED_HAKA | LIMIT_SETUP | WATCH | SKIP | SELL
+    actionText,
+    confidence,   // HIGH | MEDIUM | LOW | CRITICAL
+    recommendation,
+
+    // Entry levels dengan R:R
+    levels: {
+      e1: { price: e1 || price, rr: rrE1 },
+      e2: e2 ? { price: e2, rr: rrE2 } : null,
+      e3: e3 ? { price: e3, rr: rrE3 } : null,
+      tp,
+      sl
+    },
+
+    // Technicals (untuk detail view)
+    technicals: { pwr, bdr, fase, rsi, chg, rvol },
+
+    // Context
+    context: {
+      ihsg    : regime,
+      liquidity: liquidityStatus.label,
+      warnings
+    },
+
+    // Pine reference (transparan ke user)
+    pine: {
+      sent  : pine.pineSent,
+      reason: pine.pineReason
+    },
+
+    // Internal (untuk debugging)
+    _aksiInternal: aksi
+  };
+}
+
+// ── APPLY FILTERS v3.1 ────────────────────────────────────────────────────
+// Tidak ada downgrade aksi — hanya annotasi recommendation + confidence
+// aksi dari calculateAKSI selalu preserved (tidak diubah)
+function applyFilters(ctx){
+  const {
+    aksi, price, tp, sl, closes,
+    pwr, bdr, hist, histPrev, goldenCross, deathCross,
+    liquidityStatus, regime,
+    rvol = 1, fase = '', rsi = 50
+  } = ctx;
+
+  const warnings    = [];
+  const blocksFrom  = [];
+  let severityScore = 0;
+
+  // 1. Likuiditas
+  if(!liquidityStatus.ok){
+    warnings.push(`Likuiditas ${liquidityStatus.label}`);
+    blocksFrom.push('LIQUIDITY');
+    if(liquidityStatus.label === 'ILIKUID')    severityScore -= 4;
+    else if(liquidityStatus.label === 'TIPIS') severityScore -= 2;
+  }
+
+  // 2. Trend structure (SMA 50/200)
+  const sma50       = calculateSMA(closes, 50);
+  const sma200      = calculateSMA(closes, 200);
+  const aboveSMA50  = sma50  ? price > sma50  : null;
+  const aboveSMA200 = sma200 ? price > sma200 : null;
+
+  if(sma200 !== null && !aboveSMA200){
+    warnings.push('Di bawah SMA200 — trend bearish primary');
+    blocksFrom.push('SMA200');
+    severityScore -= 2;
+  } else if(sma200 === null){
+    warnings.push('Data <200 bar — SMA200 tidak tersedia');
+    severityScore -= 0.5;
+  }
+
+  if(sma50 !== null && !aboveSMA50 && aboveSMA200){
+    warnings.push('Di bawah SMA50 — short-term weakness');
+    severityScore -= 1;
+  }
+
+  // 3. MACD cross quality
+  const crossConf = confirmCross(price, hist, histPrev, goldenCross, deathCross);
+  if(!crossConf.confirmed && (goldenCross || deathCross)){
+    warnings.push(`Cross lemah: ${crossConf.reason}`);
+    blocksFrom.push('CROSS_WEAK');
+    severityScore -= 1;
+  }
+
+  // 4. Market regime
+  if(regime === 'BEAR'){
+    warnings.push('IHSG BEAR regime — headwind kuat');
+    blocksFrom.push('REGIME_BEAR');
+    severityScore -= 2;
+  } else if(regime === 'NEUTRAL'){
+    warnings.push('IHSG NEUTRAL — tidak ada tailwind');
+    severityScore -= 0.5;
+  }
+
+  // 5. Risk:Reward
+  const rr = calculateRR(price, tp, sl, aksi);
+  if((aksi === 'HAKA' || aksi === 'BUY') && rr > 0){
+    if(rr < 0.5){
+      warnings.push(`R:R ${rr} < 0.5 — risiko jauh > reward`);
+      blocksFrom.push('RR_EXTREME');
+      severityScore -= 4;
+    } else if(rr < 1.0){
+      warnings.push(`R:R ${rr} < 1.0 — reward tidak seimbang risiko`);
+      blocksFrom.push('RR_POOR');
+      severityScore -= 2;
+    } else if(rr < 1.5){
+      warnings.push(`R:R ${rr} < 1.5 — suboptimal tapi masih tradable`);
+      severityScore -= 1;
+    } else if(rr < 2.0){
+      warnings.push(`R:R ${rr} < 2.0 — idealnya ≥ 2.0`);
+      severityScore -= 0.5;
+    }
+  }
+
+  // 6. Recommendation + Confidence
+  //    TIDAK ADA downgrade aksi — biarkan user decide
+  let recommendation = '';
+  let confidence     = 'HIGH';
+
+  if(aksi === 'HAKA' || aksi === 'BUY'){
+    if(severityScore <= -5){
+      recommendation = 'SKIP — Risk terlalu tinggi, hindari';
+      confidence     = 'CRITICAL';
+    } else if(severityScore <= -3){
+      recommendation = 'CAUTION — Pertimbangkan E3 untuk R:R lebih baik';
+      confidence     = 'LOW';
+    } else if(severityScore < 0){
+      recommendation = 'ENTRY — Setup valid, perhatikan warnings';
+      confidence     = 'MEDIUM';
+    } else {
+      recommendation = 'ENTRY — Setup bersih';
+      confidence     = 'HIGH';
+    }
+  } else if(aksi === 'SELL'){
+    recommendation = 'EXIT — Sinyal bearish aktif';
+    confidence     = 'HIGH';
+  } else {
+    recommendation = 'WAIT — Belum ada setup';
+    confidence     = severityScore <= -3 ? 'LOW' : 'MEDIUM';
+  }
+
+  return {
+    aksi,          // TIDAK DIUBAH — preserved dari calculateAKSI
+    warnings,
+    blocksFrom,
+    recommendation,
+    confidence,
+    severityScore,
+    rr,
+    sma50,
+    sma200,
+    aboveSMA50,
+    aboveSMA200,
+    crossValid: crossConf.confirmed
+  };
+}
+
 // ── FRAKSI HARGA ──────────────────────────────────────────────────────────
 function getFraksi(price){
   if(price <  200) return 1;
@@ -334,12 +533,10 @@ function roundToFraksi(price, fraksi){
 // ── TP & SL ───────────────────────────────────────────────────────────────
 function calculateTPSL(price, atr, fase, aksi, highs, lows){
   if(!isFinite(price) || !isFinite(atr)) return { tp:null, sl:null };
-
   const resist  = Math.max(...highs.slice(-10));
   const support = Math.min(...lows.slice(-10));
   const fraksi  = getFraksi(price);
   let tp, sl;
-
   if(aksi === 'SELL'){
     tp = roundToFraksi(price - atr * 1.5, fraksi);
     sl = roundToFraksi(price + atr * 1.0, fraksi);
@@ -350,18 +547,15 @@ function calculateTPSL(price, atr, fase, aksi, highs, lows){
     if(tp <= price) tp = roundToFraksi(price + atr * 1.5, fraksi);
     if(sl >= price) sl = roundToFraksi(price - atr * 0.8, fraksi);
   }
-
   return { tp, sl };
 }
 
 // ── ENTRY POINT ───────────────────────────────────────────────────────────
 function calculateEntry(price, atr, fase, aksi, highs, lows){
   if(aksi === 'SELL') return { e1:null, e2:null, e3:null };
-
   const fraksi  = getFraksi(price);
   const support = Math.min(...lows.slice(-10));
   let e1, e2, e3;
-
   if(fase === 'BREAKOUT'){
     e1 = roundToFraksi(price, fraksi);
     e2 = roundToFraksi(price - atr * 0.3, fraksi);
@@ -375,43 +569,34 @@ function calculateEntry(price, atr, fase, aksi, highs, lows){
     e2 = roundToFraksi(price - atr * 0.4, fraksi);
     e3 = roundToFraksi(price - atr * 0.8, fraksi);
   }
-
   const sl = roundToFraksi(Math.max(price - atr * 1.0, support * 0.99), fraksi);
   if(e3 <= sl) e3 = roundToFraksi(sl + fraksi * 2, fraksi);
   if(e2 <= sl) e2 = roundToFraksi(sl + fraksi * 4, fraksi);
-
   if(e3 >= e2) e3 = roundToFraksi(e2 - fraksi * 2, fraksi);
   if(e2 >= e1) e2 = roundToFraksi(e1 - fraksi * 2, fraksi);
-
   if(e3 >= e2 || e2 >= e1){
     e1 = roundToFraksi(price, fraksi);
     e2 = roundToFraksi(price - fraksi * 2, fraksi);
     e3 = roundToFraksi(price - fraksi * 4, fraksi);
   }
-
   return { e1, e2, e3 };
 }
 
-// ── SMA ──────────────────────────────────────────────────────────────────
+// ── SMA ───────────────────────────────────────────────────────────────────
 function calculateSMA(values, period){
   if(!Array.isArray(values) || values.length < period) return null;
   const result = avg(values.slice(-period));
   return Number.isFinite(result) ? result : null;
 }
 
-// ── LIKUIDITAS ───────────────────────────────────────────────────────────
+// ── LIKUIDITAS ────────────────────────────────────────────────────────────
 function calculateLiquidity(closes, volumes, lookback=20){
   const n = Math.min(closes.length, volumes.length, lookback);
   if(n < 10) return { avgValue:0, avgVolume:0 };
-
   const c = closes.slice(-n);
   const v = volumes.slice(-n);
   const values = v.map((vol, i) => vol * c[i]);
-
-  return {
-    avgValue: safeNum(avg(values)),
-    avgVolume: safeNum(avg(v))
-  };
+  return { avgValue: safeNum(avg(values)), avgVolume: safeNum(avg(v)) };
 }
 
 function getLiquidityStatus(liquidity, minValueIDR=5_000_000_000){
@@ -422,51 +607,43 @@ function getLiquidityStatus(liquidity, minValueIDR=5_000_000_000){
   return                       { label:'ILIKUID', ok:false, score:-2 };
 }
 
-// ── KONFIRMASI MACD CROSS ────────────────────────────────────────────────
+// ── KONFIRMASI MACD CROSS ─────────────────────────────────────────────────
 function confirmCross(price, hist, histPrev, goldenCross, deathCross){
   if(!goldenCross && !deathCross) return { confirmed:true, reason:'no-cross' };
-
   const histThreshold = Math.max(0.1, price * 0.0005);
-
   if(goldenCross){
-    if(hist < histThreshold)     return { confirmed:false, reason:`hist ${hist} < threshold` };
-    if(hist <= histPrev)         return { confirmed:false, reason:'hist tidak akselerasi' };
+    if(hist < histThreshold)  return { confirmed:false, reason:`hist ${hist} < threshold` };
+    if(hist <= histPrev)       return { confirmed:false, reason:'hist tidak akselerasi' };
     return { confirmed:true, reason:'valid' };
   }
-
   if(deathCross){
     if(Math.abs(hist) < histThreshold) return { confirmed:false, reason:`hist ${hist} < threshold` };
     if(hist >= histPrev)                return { confirmed:false, reason:'hist tidak akselerasi' };
     return { confirmed:true, reason:'valid' };
   }
-
   return { confirmed:true, reason:'none' };
 }
 
-// ── MARKET REGIME (IHSG) ─────────────────────────────────────────────────
+// ── MARKET REGIME (IHSG) ──────────────────────────────────────────────────
 function calculateRegime(ihsgCloses){
   if(!Array.isArray(ihsgCloses) || ihsgCloses.length < 50){
     return { regime:'UNKNOWN', rsi:50, price:null, sma50:null, sma200:null };
   }
-
   const rsi    = calculateRSI(ihsgCloses);
   const sma50  = calculateSMA(ihsgCloses, 50);
   const sma200 = ihsgCloses.length >= 200 ? calculateSMA(ihsgCloses, 200) : null;
   const price  = ihsgCloses.at(-1);
-
   const aboveSMA50  = sma50  && price > sma50;
   const aboveSMA200 = sma200 && price > sma200;
-
   let regime;
   if(aboveSMA50 && rsi > 55 && (aboveSMA200 || sma200 === null))  regime = 'BULL';
   else if(!aboveSMA50 && rsi < 40)                                  regime = 'BEAR';
   else if(!aboveSMA50 && sma200 && !aboveSMA200)                    regime = 'BEAR';
   else                                                               regime = 'NEUTRAL';
-
   return { regime, rsi, price, sma50, sma200 };
 }
 
-// ── RISK:REWARD RATIO ────────────────────────────────────────────────────
+// ── RISK:REWARD ───────────────────────────────────────────────────────────
 function calculateRR(price, tp, sl, aksi){
   if(!isFinite(price) || !isFinite(tp) || !isFinite(sl)) return 0;
   if(aksi === 'SELL'){
@@ -481,79 +658,24 @@ function calculateRR(price, tp, sl, aksi){
   return safeNum(parseFloat((reward / risk).toFixed(2)));
 }
 
-// ── APPLY FILTERS ────────────────────────────────────────────────────────
-function applyFilters(ctx){
-  const {
-    aksi, price, tp, sl, closes,
-    pwr, bdr, hist, histPrev, goldenCross, deathCross,
-    liquidityStatus, regime,
-    rvol = 1, fase = ''
-  } = ctx;
-
-  const warnings = [];
-
-  if(!liquidityStatus.ok){
-    warnings.push(`Likuiditas ${liquidityStatus.label}`);
-  }
-
-  const sma50       = calculateSMA(closes, 50);
-  const sma200      = calculateSMA(closes, 200);
-  const aboveSMA50  = sma50  ? price > sma50  : null;
-  const aboveSMA200 = sma200 ? price > sma200 : null;
-
-  if(sma200 !== null && !aboveSMA200){
-    warnings.push('Di bawah SMA200');
-  } else if(sma200 === null){
-    warnings.push('Data <200 bar — SMA200 tidak tersedia');
-  }
-
-  const crossConf = confirmCross(price, hist, histPrev, goldenCross, deathCross);
-  if(!crossConf.confirmed && (goldenCross || deathCross)){
-    warnings.push(`Cross lemah: ${crossConf.reason}`);
-  }
-
-  if(regime === 'BEAR'){
-    warnings.push('IHSG BEAR regime');
-  } else if(regime === 'NEUTRAL'){
-    warnings.push('IHSG NEUTRAL regime');
-  }
-
-  const rr = calculateRR(price, tp, sl, aksi);
-  if((aksi === 'HAKA' || aksi === 'BUY') && rr > 0 && rr < 2.0){
-    warnings.push(`R:R ${rr} < 1:2.0`);
-  }
-
-  return {
-    aksi,
-    aksiOriginal: aksi,
-    downgraded: false,
-    warnings,
-    blocksFrom: [],
-    rr,
-    sma50,
-    sma200,
-    aboveSMA50,
-    aboveSMA200,
-    crossValid: crossConf.confirmed
-  };
-}
-
 // ── EXPORTS ───────────────────────────────────────────────────────────────
 module.exports = {
   avg,
   calculateRSI,    getRSISignal,
-  calculateMACD,   getMACDSignal,  getZoneLabel,
+  calculateMACD,   getMACDSignal,    getZoneLabel,
   calculateRVOL,   getRVOLSignal,
   calculateATR,    calculateCHG,
   calculateWick,   calculateBDR,
   calculatePWR,    calculateFASE,
-  calculateAKSI,   calculateTPSL,
-  calculateEntry,  getFraksi,
-  roundToFraksi,
+  calculateAKSI,
+  inferPineStatus,         // NEW v7
+  formatScreenerOutput,    // NEW v7
+  calculateTPSL,   calculateEntry,
+  getFraksi,       roundToFraksi,
   calculateSMA,
-  calculateLiquidity,  getLiquidityStatus,
+  calculateLiquidity,      getLiquidityStatus,
   confirmCross,
   calculateRegime,
   calculateRR,
-  applyFilters
+  applyFilters             // v3.1
 };

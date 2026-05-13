@@ -87,7 +87,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
 .s-addbar input{font-size:12px;padding:6px 10px;border:1px solid #333;border-radius:8px;background:#111;color:#fff;width:140px;text-transform:uppercase;outline:none}
 .s-addbar input:focus{border-color:#ffd700}
 .cd{font-size:11px;color:#555;margin-left:auto}
-.sum-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin-bottom:10px}
+.sum-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:10px}
 .csc{background:#111;border-radius:10px;padding:12px;text-align:center;border:1px solid #222}
 .csc .sk{font-size:10px;color:#555;margin-bottom:4px}
 .csc .sv{font-size:24px;font-weight:600}
@@ -107,8 +107,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
 .fb{font-size:11px;padding:5px 12px;border-radius:8px;border:1px solid #333;background:#111;color:#666;cursor:pointer}
 .fb:hover{background:#1a1a1a;color:#fff}.fb.on{font-weight:600;border-color:transparent}
 .fb-all.on{background:#333;color:#fff}
-.fb-e2.on{background:#0a2a1a;color:#00ff88;border-color:#00ff88}
-.fb-e3.on{background:#001a10;color:#00ffaa;border-color:#00ffaa}
+.fb-antri.on{background:#0a2a1a;color:#00ff88;border-color:#00ff88}
 .fb-miss.on{background:#0a1a2a;color:#00aaff;border-color:#00aaff}
 .fb-wait.on{background:#2a1a00;color:#ffaa00;border-color:#ffaa00}
 .fb-exit.on{background:#2a0a0a;color:#ff4444;border-color:#ff4444}
@@ -145,8 +144,7 @@ tr.dr{cursor:pointer}tr.dr:hover td{background:#1a1a1a}tr.sel td{background:#0a1
 .b-bearz{background:#111;color:#555;border:1px solid #333}
 .b-zup{background:#001a10;color:#00ffaa;border:1px solid #00ffaa}
 .b-zdown{background:#1a0005;color:#ff6688;border:1px solid #ff6688}
-.b-e2{background:#0a2a1a;color:#00ff88;border:1px solid #00ff88}
-.b-e3{background:#001a10;color:#00ffaa;border:1px solid #00ffaa}
+.b-antri{background:#0a2a1a;color:#00ff88;border:1px solid #00ff88}
 .b-miss{background:#0a1a2a;color:#00aaff;border:1px solid #00aaff}
 .b-wait{background:#2a1a00;color:#ffaa00;border:1px solid #ffaa00}
 .b-exit{background:#2a0a0a;color:#ff4444;border:1px solid #ff4444}
@@ -250,8 +248,7 @@ tr.dr{cursor:pointer}tr.dr:hover td{background:#1a1a1a}tr.sel td{background:#0a1
     <span class="regime-meta" id="regimeMeta">Menunggu data IHSG...</span>
   </div>
   <div class="sum-grid">
-    <div class="csc"><div class="sk">E2</div><div class="sv" id="cE2" style="color:#00ff88">0</div></div>
-    <div class="csc"><div class="sk">E3</div><div class="sv" id="cE3" style="color:#00ffaa">0</div></div>
+    <div class="csc"><div class="sk">ANTRI</div><div class="sv" id="cAN" style="color:#00ff88">0</div></div>
     <div class="csc"><div class="sk">MISS</div><div class="sv" id="cMS" style="color:#00aaff">0</div></div>
     <div class="csc"><div class="sk">WAIT</div><div class="sv" id="cWT" style="color:#ffaa00">0</div></div>
     <div class="csc"><div class="sk">EXIT</div><div class="sv" id="cEX" style="color:#ff4444">0</div></div>
@@ -263,11 +260,10 @@ tr.dr{cursor:pointer}tr.dr:hover td{background:#1a1a1a}tr.sel td{background:#0a1
   <div class="filter-row">
     <span class="filter-label">TYPE</span>
     <button class="fb fb-all on" onclick="setFilter('entryType','ALL',this)">Semua</button>
-    <button class="fb fb-e2"   onclick="setFilter('entryType','E2',this)">E2</button>
-    <button class="fb fb-e3"   onclick="setFilter('entryType','E3',this)">E3</button>
-    <button class="fb fb-miss" onclick="setFilter('entryType','MISS',this)">MISS</button>
-    <button class="fb fb-wait" onclick="setFilter('entryType','WAIT',this)">WAIT</button>
-    <button class="fb fb-exit" onclick="setFilter('entryType','EXIT',this)">EXIT</button>
+    <button class="fb fb-antri" onclick="setFilter('entryType','ANTRI',this)">ANTRI</button>
+    <button class="fb fb-miss"  onclick="setFilter('entryType','MISS',this)">MISS</button>
+    <button class="fb fb-wait"  onclick="setFilter('entryType','WAIT',this)">WAIT</button>
+    <button class="fb fb-exit"  onclick="setFilter('entryType','EXIT',this)">EXIT</button>
     <span class="sep">|</span>
     <span class="filter-label">FASE</span>
     <button class="fb fb-bo" onclick="setFilter('fase','BREAKOUT',this)">Breakout</button>
@@ -318,12 +314,11 @@ tr.dr{cursor:pointer}tr.dr:hover td{background:#1a1a1a}tr.sel td{background:#0a1
     </div>
     <div class="tv-wrap" id="tvWrap"></div>
   </div>
-  <div class="note"><strong>v7:</strong> E2/E3 = antri limit · MISS = cek Telegram · WAIT = pantau · EXIT = hindari. <strong>Bukan rekomendasi investasi.</strong></div>
+  <div class="note"><strong>v7:</strong> ANTRI = pasang limit order (tampil dua level harga) · MISS = cek Telegram · WAIT = pantau · EXIT = hindari. <strong>Bukan rekomendasi investasi.</strong></div>
 </div>
 </div>
 
 <script>
-// ═══ TAB ══════════════════════════════════════════════════════
 var activeTab='simple';
 function switchTab(tab){
   activeTab=tab;
@@ -342,43 +337,16 @@ function setStatus(s){
   else{dot.classList.add('err');badge.textContent='Error';badge.classList.add('err');}
 }
 
-// ═══ SIMPLE ══════════════════════════════════════════════════
+// SIMPLE
 var sCache={},sSel=null,sCdInt=null,sCdN=30;
 function fmtIDR(n){if(!n)return'—';if(n>=1e9)return(n/1e9).toFixed(1)+'M';if(n>=1e6)return(n/1e6).toFixed(1)+'Jt';return n.toLocaleString('id-ID');}
-function sUpdateRegime(ihsg,portfolio){
-  if(!ihsg)return;
-  var badge=document.getElementById('sRegimeBadge'),meta=document.getElementById('sRegimeMeta');
-  badge.className='s-regime-badge '+(ihsg.bullish?'r-bull':'r-bear');
-  badge.textContent=ihsg.bullish?'🟢 IHSG BULLISH':'🔴 IHSG BEARISH';
-  var parts=[];if(ihsg.price)parts.push('Price: '+ihsg.price.toLocaleString('id-ID'));
-  if(ihsg.sma50)parts.push('SMA50: '+ihsg.sma50.toLocaleString('id-ID'));
-  if(!ihsg.bullish)parts.push('⚠ Semua BUY diblokir');
-  meta.textContent=parts.join(' · ');
-  if(portfolio)document.getElementById('sPortfolioInfo').textContent='Portfolio: Rp '+fmtIDR(portfolio)+' | Risk: Rp '+fmtIDR(portfolio*0.02);
-}
+function sUpdateRegime(ihsg,portfolio){if(!ihsg)return;var badge=document.getElementById('sRegimeBadge'),meta=document.getElementById('sRegimeMeta');badge.className='s-regime-badge '+(ihsg.bullish?'r-bull':'r-bear');badge.textContent=ihsg.bullish?'🟢 IHSG BULLISH':'🔴 IHSG BEARISH';var parts=[];if(ihsg.price)parts.push('Price: '+ihsg.price.toLocaleString('id-ID'));if(ihsg.sma50)parts.push('SMA50: '+ihsg.sma50.toLocaleString('id-ID'));if(!ihsg.bullish)parts.push('⚠ Semua BUY diblokir');meta.textContent=parts.join(' · ');if(portfolio)document.getElementById('sPortfolioInfo').textContent='Portfolio: Rp '+fmtIDR(portfolio)+' | Risk: Rp '+fmtIDR(portfolio*0.02);}
 function stochBar(k,d){var kW=Math.min(100,Math.max(0,k)),kCol=k<30?'#00aaff':k>70?'#ff4444':'#00ff88';return'<span class="stoch-bar"><span class="stoch-track"><span class="stoch-tick" style="left:30%"></span><span class="stoch-tick" style="left:70%"></span><span class="stoch-fill-k" style="width:'+kW+'%;background:'+kCol+'"></span></span><span class="stoch-val" style="color:'+kCol+'">'+k.toFixed(1)+'</span><span style="color:#444;font-size:10px">·</span><span class="stoch-val" style="color:#ff8888">'+d.toFixed(1)+'</span></span>';}
 function macdCell(h){return'<span class="'+(h>0?'macd-pos':'macd-neg')+'">'+(h>0?'+':'')+h+'</span>';}
 function stars(n){return'<span class="str">'+'★'.repeat(n)+'<span style="color:#222">'+'★'.repeat(3-n)+'</span></span>';}
 function chgCell(c){return'<span class="'+(c>=0?'gp':'gn')+'">'+(c>=0?'+':'')+c.toFixed(1)+'%</span>';}
 function liqBadge(l){if(!l)return'';if(l==='LIKUID+'||l==='LIKUID')return'<span class="liq-likuid">'+l+'</span>';if(l==='TIPIS')return'<span class="liq-tipis">TIPIS</span>';if(l==='ILIKUID')return'<span class="liq-ilikuid">ILIKUID</span>';return'';}
-function sRender(){
-  var all=Object.values(sCache).filter(function(d){return d&&d.ok;});
-  var buy=all.filter(function(d){return d.aksi==='BUY';}).sort(function(a,b){return b.strength-a.strength||b.chg-a.chg;});
-  var sell=all.filter(function(d){return d.aksi==='SELL';}).sort(function(a,b){return b.strength-a.strength;});
-  var warn=all.filter(function(d){return d.aksi==='WARN';}).sort(function(a,b){return b.strength-a.strength;});
-  var blocked=all.filter(function(d){return d.aksi==='BLOCKED';}).sort(function(a,b){return b.strength-a.strength;});
-  var watch=all.filter(function(d){return d.aksi==='WATCH';}).sort(function(a,b){return a.stochK-b.stochK;});
-  document.getElementById('sBuyCount').textContent=buy.length;
-  document.getElementById('sSellCount').textContent=sell.length;
-  document.getElementById('sWarnCount').textContent=warn.length;
-  document.getElementById('sBlockedCount').textContent=blocked.length;
-  document.getElementById('sWatchCount').textContent=watch.length;
-  document.getElementById('sBuyBody').innerHTML=!buy.length?'<tr><td colspan="11" class="s-empty">Tidak ada sinyal beli.</td></tr>':buy.map(function(d){return'<tr class="clickable" onclick="sRowClick(\''+d.ticker+'\')"><td style="font-weight:600">'+d.ticker+' '+liqBadge(d.liquidity)+'</td><td style="color:#ffaa00;font-weight:500">'+d.price.toLocaleString('id-ID')+'</td><td>'+chgCell(d.chg)+'</td><td>'+stochBar(d.stochK,d.stochD)+'</td><td>'+macdCell(d.hist)+'</td><td><span class="sl-v">'+d.sl.toLocaleString('id-ID')+'</span> <span class="pct-v">-'+d.slPct+'%</span></td><td><span class="tp-v">'+d.tp.toLocaleString('id-ID')+'</span> <span class="pct-v">+'+d.tpPct+'%</span></td><td><span class="lot-v">'+(d.lots||'—')+'</span></td><td><span class="val-v">'+fmtIDR(d.totalValue)+'</span></td><td>'+stars(d.strength)+'</td><td class="sig-label">'+d.label+'</td></tr>';}).join('');
-  document.getElementById('sSellBody').innerHTML=!sell.length?'<tr><td colspan="7" class="s-empty">Tidak ada sinyal jual.</td></tr>':sell.map(function(d){return'<tr class="clickable" onclick="sRowClick(\''+d.ticker+'\')"><td style="font-weight:600">'+d.ticker+'</td><td style="color:#ffaa00;font-weight:500">'+d.price.toLocaleString('id-ID')+'</td><td>'+chgCell(d.chg)+'</td><td>'+stochBar(d.stochK,d.stochD)+'</td><td>'+macdCell(d.hist)+'</td><td>'+stars(d.strength)+'</td><td class="sig-label">'+d.label+'</td></tr>';}).join('');
-  document.getElementById('sWarnBody').innerHTML=!warn.length?'<tr><td colspan="6" class="s-empty">Tidak ada warning.</td></tr>':warn.map(function(d){return'<tr class="clickable" onclick="sRowClick(\''+d.ticker+'\')"><td style="font-weight:600;color:#ff8800">'+d.ticker+'</td><td style="color:#ffaa00;font-weight:500">'+d.price.toLocaleString('id-ID')+'</td><td>'+chgCell(d.chg)+'</td><td>'+stochBar(d.stochK,d.stochD)+'</td><td>'+macdCell(d.hist)+'</td><td class="sig-label" style="color:#ff8800">'+d.label+'</td></tr>';}).join('');
-  document.getElementById('sBlockedBody').innerHTML=!blocked.length?'<tr><td colspan="7" class="s-empty">Tidak ada yang diblokir.</td></tr>':blocked.map(function(d){return'<tr class="clickable" onclick="sRowClick(\''+d.ticker+'\')"><td style="font-weight:600;color:#555">'+d.ticker+'</td><td style="color:#888">'+d.price.toLocaleString('id-ID')+'</td><td>'+stochBar(d.stochK,d.stochD)+'</td><td>'+macdCell(d.hist)+'</td><td>'+stars(d.strength)+'</td><td class="sig-label" style="color:#777">'+d.label+'</td><td class="blocked-by">'+(d.blockedBy||[]).join(' · ')+'</td></tr>';}).join('');
-  document.getElementById('sWatchBody').innerHTML=!watch.length?'<tr><td colspan="6" class="s-empty">Tidak ada watch.</td></tr>':watch.map(function(d){return'<tr class="clickable" onclick="sRowClick(\''+d.ticker+'\')"><td style="font-weight:600;color:#ffaa00">'+d.ticker+'</td><td style="color:#ffaa00;font-weight:500">'+d.price.toLocaleString('id-ID')+'</td><td>'+chgCell(d.chg)+'</td><td>'+stochBar(d.stochK,d.stochD)+'</td><td>'+macdCell(d.hist)+'</td><td class="sig-label">'+d.label+'</td></tr>';}).join('');
-}
+function sRender(){var all=Object.values(sCache).filter(function(d){return d&&d.ok;});var buy=all.filter(function(d){return d.aksi==='BUY';}).sort(function(a,b){return b.strength-a.strength||b.chg-a.chg;});var sell=all.filter(function(d){return d.aksi==='SELL';}).sort(function(a,b){return b.strength-a.strength;});var warn=all.filter(function(d){return d.aksi==='WARN';}).sort(function(a,b){return b.strength-a.strength;});var blocked=all.filter(function(d){return d.aksi==='BLOCKED';}).sort(function(a,b){return b.strength-a.strength;});var watch=all.filter(function(d){return d.aksi==='WATCH';}).sort(function(a,b){return a.stochK-b.stochK;});document.getElementById('sBuyCount').textContent=buy.length;document.getElementById('sSellCount').textContent=sell.length;document.getElementById('sWarnCount').textContent=warn.length;document.getElementById('sBlockedCount').textContent=blocked.length;document.getElementById('sWatchCount').textContent=watch.length;document.getElementById('sBuyBody').innerHTML=!buy.length?'<tr><td colspan="11" class="s-empty">Tidak ada sinyal beli.</td></tr>':buy.map(function(d){return'<tr class="clickable" onclick="sRowClick(\''+d.ticker+'\')"><td style="font-weight:600">'+d.ticker+' '+liqBadge(d.liquidity)+'</td><td style="color:#ffaa00;font-weight:500">'+d.price.toLocaleString('id-ID')+'</td><td>'+chgCell(d.chg)+'</td><td>'+stochBar(d.stochK,d.stochD)+'</td><td>'+macdCell(d.hist)+'</td><td><span class="sl-v">'+d.sl.toLocaleString('id-ID')+'</span> <span class="pct-v">-'+d.slPct+'%</span></td><td><span class="tp-v">'+d.tp.toLocaleString('id-ID')+'</span> <span class="pct-v">+'+d.tpPct+'%</span></td><td><span class="lot-v">'+(d.lots||'—')+'</span></td><td><span class="val-v">'+fmtIDR(d.totalValue)+'</span></td><td>'+stars(d.strength)+'</td><td class="sig-label">'+d.label+'</td></tr>';}).join('');document.getElementById('sSellBody').innerHTML=!sell.length?'<tr><td colspan="7" class="s-empty">Tidak ada sinyal jual.</td></tr>':sell.map(function(d){return'<tr class="clickable" onclick="sRowClick(\''+d.ticker+'\')"><td style="font-weight:600">'+d.ticker+'</td><td style="color:#ffaa00;font-weight:500">'+d.price.toLocaleString('id-ID')+'</td><td>'+chgCell(d.chg)+'</td><td>'+stochBar(d.stochK,d.stochD)+'</td><td>'+macdCell(d.hist)+'</td><td>'+stars(d.strength)+'</td><td class="sig-label">'+d.label+'</td></tr>';}).join('');document.getElementById('sWarnBody').innerHTML=!warn.length?'<tr><td colspan="6" class="s-empty">Tidak ada warning.</td></tr>':warn.map(function(d){return'<tr class="clickable" onclick="sRowClick(\''+d.ticker+'\')"><td style="font-weight:600;color:#ff8800">'+d.ticker+'</td><td style="color:#ffaa00;font-weight:500">'+d.price.toLocaleString('id-ID')+'</td><td>'+chgCell(d.chg)+'</td><td>'+stochBar(d.stochK,d.stochD)+'</td><td>'+macdCell(d.hist)+'</td><td class="sig-label" style="color:#ff8800">'+d.label+'</td></tr>';}).join('');document.getElementById('sBlockedBody').innerHTML=!blocked.length?'<tr><td colspan="7" class="s-empty">Tidak ada yang diblokir.</td></tr>':blocked.map(function(d){return'<tr class="clickable" onclick="sRowClick(\''+d.ticker+'\')"><td style="font-weight:600;color:#555">'+d.ticker+'</td><td style="color:#888">'+d.price.toLocaleString('id-ID')+'</td><td>'+stochBar(d.stochK,d.stochD)+'</td><td>'+macdCell(d.hist)+'</td><td>'+stars(d.strength)+'</td><td class="sig-label" style="color:#777">'+d.label+'</td><td class="blocked-by">'+(d.blockedBy||[]).join(' · ')+'</td></tr>';}).join('');document.getElementById('sWatchBody').innerHTML=!watch.length?'<tr><td colspan="6" class="s-empty">Tidak ada watch.</td></tr>':watch.map(function(d){return'<tr class="clickable" onclick="sRowClick(\''+d.ticker+'\')"><td style="font-weight:600;color:#ffaa00">'+d.ticker+'</td><td style="color:#ffaa00;font-weight:500">'+d.price.toLocaleString('id-ID')+'</td><td>'+chgCell(d.chg)+'</td><td>'+stochBar(d.stochK,d.stochD)+'</td><td>'+macdCell(d.hist)+'</td><td class="sig-label">'+d.label+'</td></tr>';}).join('');}
 function sRowClick(t){sSel=t;var d=sCache[t];if(!d||!d.ok)return;document.getElementById('sCTicker').textContent=t+'.JK';var col=d.aksi==='BUY'?'#00ff88':d.aksi==='SELL'?'#ff4444':d.aksi==='WARN'?'#ff8800':'#ffaa00';document.getElementById('sCSignal').innerHTML='<span style="color:'+col+';font-weight:600;font-size:12px">'+d.aksi+' — '+d.label+'</span>';var tvUrl='https://s.tradingview.com/widgetembed/?frameElementId=tv_s_'+t+'&symbol=IDX%3A'+t+'&interval=D&hidesidetoolbar=0&saveimage=0&studies=STOCH%4010%2C5%2C5%2C0%2C3%2C0%1FMACD%40tv-basicstudies&theme=dark&style=1&timezone=Asia%2FJakarta&withdateranges=1&locale=id';document.getElementById('sCTvWrap').innerHTML='<iframe src="'+tvUrl+'" allowtransparency="true" frameborder="0" scrolling="no"></iframe>';var p=document.getElementById('sChartPanel');p.style.display='block';p.scrollIntoView({behavior:'smooth',block:'nearest'});}
 function sCloseChart(){document.getElementById('sChartPanel').style.display='none';document.getElementById('sCTvWrap').innerHTML='';sSel=null;}
 async function sFetchData(){try{var r=await fetch('/data-simple');if(!r.ok)throw new Error('HTTP '+r.status);var j=await r.json();var data=j.data||{};if(j.ihsg)sUpdateRegime(j.ihsg,j.portfolio);if(!Object.keys(data).length){setTimeout(sFetchData,3000);return;}sCache=data;setStatus('ok');document.getElementById('progFill').style.width='100%';var now=new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',second:'2-digit'});document.getElementById('lastUpdate').textContent='Update: '+now+(j.lastScan?' | Scan: '+j.lastScan:'');document.getElementById('sLastScan').textContent=j.lastScan?'Scan: '+j.lastScan:'';sRender();sStartCD();}catch(e){setStatus('error');document.getElementById('lastUpdate').textContent='Error: '+e.message;setTimeout(sFetchData,5000);}}
@@ -387,9 +355,10 @@ function sStartCD(){if(sCdInt)clearInterval(sCdInt);sCdN=30;sCdInt=setInterval(f
 function sAddStock(){var inp=document.getElementById('sAddInp');var v=inp.value.trim().toUpperCase().replace('.JK','').replace(/[^A-Z0-9]/g,'');if(!v){inp.value='';return;}inp.value='';sCache[v]={ticker:v,ok:false,error:'Loading...'};sRender();fetch('/screener-simple/'+v).then(function(r){return r.json();}).then(function(d){sCache[v]=d;sRender();}).catch(function(e){sCache[v]={ticker:v,ok:false,error:e.message};sRender();});}
 document.getElementById('sAddInp').addEventListener('keydown',function(e){if(e.key==='Enter')sAddStock();});
 
-// ═══ COMPLEX v7 — DENGAN 3 BUG FIX ══════════════════════════
+// COMPLEX v7 — ANTRI
 var cache={},regime={},sel=null,fType='entryType',fVal='ALL',sKey='entryType',sAsc=true,cdInt=null,cdN=30;
-var ET={E2:0,E3:1,MISS:2,WAIT:3,EXIT:4},FO={BREAKOUT:0,REBOUND:1,SIDEWAYS:2,BREAKDOWN:3};
+var ET={ANTRI:0,MISS:1,WAIT:2,EXIT:3};
+var FO={BREAKOUT:0,REBOUND:1,SIDEWAYS:2,BREAKDOWN:3};
 
 function getEntryType(d){
   if(!d||!d.ok)return'WAIT';
@@ -399,65 +368,52 @@ function getEntryType(d){
   if(d.category==='LIMIT_SETUP'){
     var e2=d.levels&&d.levels.e2?d.levels.e2.rr:null;
     var e3=d.levels&&d.levels.e3?d.levels.e3.rr:null;
-    if(e2!=null&&e2>=1.0)return'E2';
-    if(e3!=null&&e3>=1.5)return'E3';
+    if((e2!=null&&e2>=1.0)||(e3!=null&&e3>=1.5))return'ANTRI';
   }
   return'WAIT';
 }
 
 function getEntryRR(d){
   var t=getEntryType(d);
-  if(t==='E2'&&d.levels&&d.levels.e2&&d.levels.e2.rr!=null)return d.levels.e2.rr;
-  if(t==='E3'&&d.levels&&d.levels.e3&&d.levels.e3.rr!=null)return d.levels.e3.rr;
+  if(t==='ANTRI'){
+    var e2=d.levels&&d.levels.e2?d.levels.e2.rr:null;
+    var e3=d.levels&&d.levels.e3?d.levels.e3.rr:null;
+    if(e2!=null&&e2>0)return e2;
+    if(e3!=null&&e3>0)return e3;
+    return null;
+  }
   if(t==='MISS')return d.rr;
   return null;
 }
 
-// ── FIX 1 & 2: entryText dengan null guard dan r>0 check ─────
 function entryText(d){
   var t=getEntryType(d);
-  if(t==='E2'){
-    var p=d.e2||(d.levels&&d.levels.e2?d.levels.e2.price:null)||'—';
-    var r=d.levels&&d.levels.e2?d.levels.e2.rr:d.rr;
-    // FIX 1: tambah r>0 agar tidak tampil "(RR 0.00)"
-    return'E2 @ '+(typeof p==='number'?p.toLocaleString('id-ID'):p)+(r!=null&&r>0?' (RR '+r.toFixed(2)+')':'');
-  }
-  if(t==='E3'){
-    var p=d.e3||(d.levels&&d.levels.e3?d.levels.e3.price:null)||'—';
-    var r=d.levels&&d.levels.e3?d.levels.e3.rr:null;
-    // FIX 1: same
-    return'E3 @ '+(typeof p==='number'?p.toLocaleString('id-ID'):p)+(r!=null&&r>0?' (RR '+r.toFixed(2)+')':'');
+  if(t==='ANTRI'){
+    var parts=[];
+    var e2=d.levels&&d.levels.e2;
+    var e3=d.levels&&d.levels.e3;
+    if(e2&&e2.price&&e2.rr>0)
+      parts.push(e2.price.toLocaleString('id-ID')+' (RR '+e2.rr.toFixed(2)+')');
+    if(e3&&e3.price&&e3.rr>0)
+      parts.push(e3.price.toLocaleString('id-ID')+' (RR '+e3.rr.toFixed(2)+')');
+    return parts.length?parts.join(' / '):'—';
   }
   if(t==='MISS'){
     var parts=[];
-    if(d.levels&&d.levels.e1){
-      var e1=d.levels.e1;
-      // FIX 2: guard e1.rr sebelum toFixed
-      var rrStr=(e1.rr!=null&&e1.rr>0)?' RR'+e1.rr.toFixed(1):'';
-      parts.push('E1 '+e1.price+rrStr);
-    }
-    if(d.levels&&d.levels.e2&&d.levels.e2.rr>=1.0){
-      // FIX 2: guard e2.rr juga
-      var r2=d.levels.e2.rr;
-      parts.push('E2 '+d.levels.e2.price+(r2!=null&&r2>0?' RR'+r2.toFixed(1):''));
-    }
+    if(d.levels&&d.levels.e1){var e1=d.levels.e1;var rrStr=(e1.rr!=null&&e1.rr>0)?' RR'+e1.rr.toFixed(1):'';parts.push('E1 '+e1.price+rrStr);}
+    if(d.levels&&d.levels.e2&&d.levels.e2.rr>=1.0){var r2=d.levels.e2.rr;parts.push(d.levels.e2.price+(r2>0?' RR'+r2.toFixed(1):''));}
     return parts.join(' | ')||'Cek Telegram';
   }
   return'—';
 }
 
 function typeBadge(t){
-  var m={E2:{cls:'b-e2',label:'E2'},E3:{cls:'b-e3',label:'E3'},MISS:{cls:'b-miss',label:'MISS'},WAIT:{cls:'b-wait',label:'WAIT'},EXIT:{cls:'b-exit',label:'EXIT'}};
+  var m={ANTRI:{cls:'b-antri',label:'ANTRI'},MISS:{cls:'b-miss',label:'MISS'},WAIT:{cls:'b-wait',label:'WAIT'},EXIT:{cls:'b-exit',label:'EXIT'}};
   var b=m[t]||m.WAIT;
   return'<span class="badge '+b.cls+'" style="padding:2px 6px;font-size:9px">'+b.label+'</span>';
 }
 
-function rrBadge(d){
-  var rr=getEntryRR(d);
-  if(rr==null||rr<=0)return'<span style="color:#333;font-size:11px">—</span>';
-  return'<span class="'+(rr>=2?'rr-good':'rr-bad')+'" style="font-size:11px;font-weight:500">'+rr.toFixed(2)+'</span>';
-}
-
+function rrBadge(d){var rr=getEntryRR(d);if(rr==null||rr<=0)return'<span style="color:#333;font-size:11px">—</span>';return'<span class="'+(rr>=2?'rr-good':'rr-bad')+'" style="font-size:11px;font-weight:500">'+rr.toFixed(2)+'</span>';}
 function pwrDots(n,fase){var cls=fase==='BREAKDOWN'?'r':fase==='SIDEWAYS'?'a':'g';var h='<span class="pwr">';for(var i=0;i<5;i++)h+='<span class="pd'+(i<n?' '+cls:'')+'"></span>';return h+'</span>';}
 function rsiBar(rsi){var col=rsi<30?'#00aaff':rsi<45?'#00ff88':rsi<55?'#aaaaaa':rsi<70?'#ffdd00':'#ff4444';return'<span class="rsi-wrap"><span class="rsi-bg"><span class="rsi-fill" style="width:'+rsi+'%;background:'+col+'"></span></span><span style="font-size:11px;color:'+col+';font-weight:500">'+rsi+'</span></span>';}
 function crossBadge(golden,death,zone,cv){var inv=cv===false?' <span class="warn-icon" title="Cross lemah">⚠</span>':'';if(golden)return'<span class="badge b-golden">🟡 GOLDEN</span>'+inv;if(death)return'<span class="badge b-death">💀 DEATH</span>'+inv;if(zone==='ZERO_CROSS_UP')return'<span class="badge b-zup">⬆️ ZERO↑</span>';if(zone==='ZERO_CROSS_DOWN')return'<span class="badge b-zdown">⬇️ ZERO↓</span>';if(zone==='BULL_ZONE')return'<span class="badge b-bullz">🔵 BULL</span>';return'<span class="badge b-bearz">⚫ BEAR</span>';}
@@ -468,11 +424,9 @@ function liqBadgeC(liq){if(!liq)return'';if(liq==='LIKUID+'||liq==='LIKUID')retu
 function setFilter(type,val,btn){fType=type;fVal=val;document.querySelectorAll('.fb').forEach(function(b){b.classList.remove('on');});btn.classList.add('on');renderTable();}
 function sortBy(k){if(sKey===k)sAsc=!sAsc;else{sKey=k;sAsc=true;}renderTable();}
 
-// ── FIX 3: hapus duplikasi blok 'entry' ──────────────────────
 function getSV(d){
   if(!d||!d.ok)return sAsc?9999:-9999;
-  // FIX 3: 'entry' dan 'entryType' pakai ET yang sama, tidak duplikat
-  if(sKey==='entryType'||sKey==='entry')return ET[getEntryType(d)]!=null?ET[getEntryType(d)]:3;
+  if(sKey==='entryType'||sKey==='entry')return ET[getEntryType(d)]!=null?ET[getEntryType(d)]:2;
   if(sKey==='fase')return FO[d.fase]!=null?FO[d.fase]:2;
   if(sKey==='bdr'){var bo={'BIG ACC':0,'AKUM':1,'AKUM?':2,'':3,'DIST':4};return bo[d.bdr]!=null?bo[d.bdr]:3;}
   if(sKey==='zone'){var zo={'ZERO_CROSS_UP':0,'BULL_ZONE':1,'ZERO_CROSS_DOWN':2,'BEAR_ZONE':3};return zo[d.zone]!=null?zo[d.zone]:2;}
@@ -490,9 +444,12 @@ function startCD(){if(cdInt)clearInterval(cdInt);cdN=30;cdInt=setInterval(functi
 function updateMood(){var ld=Object.values(cache).filter(function(d){return d&&d.ok;});if(!ld.length)return;var bo=ld.filter(function(d){return d.fase==='BREAKOUT';}).length,rb=ld.filter(function(d){return d.fase==='REBOUND';}).length,bd=ld.filter(function(d){return d.fase==='BREAKDOWN';}).length,sw=ld.filter(function(d){return d.fase==='SIDEWAYS';}).length,gc=ld.filter(function(d){return d.goldenCross;}).length,dc=ld.filter(function(d){return d.deathCross;}).length;var pct=Math.round((bo+rb)/ld.length*100);var mood=pct>=60?'BULLISH':pct<=35?'BEARISH':'MIXED';var col=pct>=60?'#00ff88':pct<=35?'#ff4444':'#ffaa00';document.getElementById('moodVal').style.color=col;document.getElementById('moodVal').textContent=mood;var stat=bo+' Breakout · '+rb+' Rebound · '+bd+' Breakdown · '+sw+' Sideways';if(gc)stat+=' · <span style="color:#ffd700;font-weight:600">'+gc+' Golden</span>';if(dc)stat+=' · <span style="color:#ff4444;font-weight:600">'+dc+' Death</span>';document.getElementById('moodStat').innerHTML=stat;}
 
 function renderTable(){
-  var e2=0,e3=0,ms=0,wt=0,ex=0;
+  var an=0,ms=0,wt=0,ex=0;
   var tickers=Object.keys(cache);if(!tickers.length)return;
-  Object.values(cache).filter(function(d){return d&&d.ok;}).forEach(function(d){var t=getEntryType(d);if(t==='E2')e2++;else if(t==='E3')e3++;else if(t==='MISS')ms++;else if(t==='WAIT')wt++;else if(t==='EXIT')ex++;});
+  Object.values(cache).filter(function(d){return d&&d.ok;}).forEach(function(d){
+    var t=getEntryType(d);
+    if(t==='ANTRI')an++;else if(t==='MISS')ms++;else if(t==='WAIT')wt++;else if(t==='EXIT')ex++;
+  });
   var rows=tickers.map(function(t){
     var d=cache[t];
     if(!d||!d.ok){if(fVal!=='ALL')return null;return{t:t,sv:9999,html:'<tr class="dr"><td class="em">'+t+'</td><td colspan="14" class="err-t">'+(d?d.error:'...')+'</td><td><button class="del" onclick="delRow(\''+t+'\')">x</button></td></tr>'};};
@@ -524,8 +481,10 @@ function renderTable(){
   }).filter(Boolean);
   rows.sort(function(a,z){if(typeof a.sv==='string')return sAsc?a.sv.localeCompare(z.sv):z.sv.localeCompare(a.sv);return sAsc?a.sv-z.sv:z.sv-a.sv;});
   document.getElementById('tBody').innerHTML=rows.map(function(r){return r.html;}).join('');
-  document.getElementById('cE2').textContent=e2;document.getElementById('cE3').textContent=e3;
-  document.getElementById('cMS').textContent=ms;document.getElementById('cWT').textContent=wt;document.getElementById('cEX').textContent=ex;
+  document.getElementById('cAN').textContent=an;
+  document.getElementById('cMS').textContent=ms;
+  document.getElementById('cWT').textContent=wt;
+  document.getElementById('cEX').textContent=ex;
   updateMood();
 }
 
@@ -556,7 +515,6 @@ function closeChart(){document.getElementById('chartPanel').style.display='none'
 function addStock(){var inp=document.getElementById('addInp');var v=inp.value.trim().toUpperCase().replace('.JK','').replace(/[^A-Z0-9]/g,'');if(!v){inp.value='';return;}inp.value='';cache[v]={ticker:v,ok:false,error:'Loading...'};renderTable();fetch('/screener/'+v).then(function(r){return r.json();}).then(function(d){cache[v]=d;renderTable();}).catch(function(e){cache[v]={ticker:v,ok:false,error:e.message};renderTable();});}
 document.getElementById('addInp').addEventListener('keydown',function(e){if(e.key==='Enter')addStock();});
 
-// ═══ INIT ════════════════════════════════════════════════════
 var complexLoaded=false;
 setStatus('loading');
 sFetchData();

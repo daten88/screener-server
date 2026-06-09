@@ -217,14 +217,15 @@ function inferPineStatus(aksi,price,tp,sl,rsi){
 }
 
 // ════════════════════════════════════════════════════════════════
-//  formatScreenerOutput — v8
+//  formatScreenerOutput — v8.1
 //
-//  Gate ANTRI diperketat:
+//  Gate ANTRI:
 //  - PWR >= 3 wajib
 //  - FASE: BREAKOUT/REBOUND bebas masuk
 //          SIDEWAYS: butuh PWR>=4 ATAU (PWR>=3 + RVOL>=1.5)
 //  - R:R: E2 >= 1.5 ATAU E3 >= 2.0
-//  - Regime BEAR = blokir total dari ANTRI
+//  - Regime BEAR: boleh lolos kalau PWR>=4 + FASE BREAKOUT/REBOUND + RVOL>=1.5
+//    (bottom bounce exception) → actionText diberi warning kurangi size 50%
 //  ILIKUID tetap warning saja, bukan blocker
 // ════════════════════════════════════════════════════════════════
 function formatScreenerOutput(ctx){
@@ -264,7 +265,10 @@ function formatScreenerOutput(ctx){
                  (fase==='SIDEWAYS'&&pwr>=3&&rvol>=1.5);
     const pwrOk=pwr>=3;
     const rrOk=(rrE2&&rrE2>=1.5)||(rrE3&&rrE3>=2.0);
-    const regimeOk=regime!=='BEAR';
+    // BEAR exception: bottom bounce setup kuat boleh lolos dengan warning
+    const bearException=regime==='BEAR'&&pwr>=4&&
+                        (fase==='BREAKOUT'||fase==='REBOUND')&&rvol>=1.5;
+    const regimeOk=regime!=='BEAR'||bearException;
 
     if(faseOk&&pwrOk&&rrOk&&regimeOk){
       category='LIMIT_SETUP';
@@ -272,6 +276,10 @@ function formatScreenerOutput(ctx){
       actionText=useE3
         ?`Pine skip (${pine.pineReason}). Antri @ ${e3} (R:R ${rrE3}).`
         :`Pine skip (${pine.pineReason}). Antri @ ${e2} (R:R ${rrE2}).`;
+      // Tambah warning kalau lolos via BEAR exception
+      if(bearException){
+        actionText+=' · ⚠️ BEAR REGIME — kurangi size 50%';
+      }
     }else{
       category='WATCH';
       actionText='Setup belum cukup kuat untuk ANTRI. Pantau.';

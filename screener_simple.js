@@ -1,24 +1,30 @@
 /**
- * screener_simple.js v2 — MACD(12,26,9) + Stochastic(10,5,5)
+ * screener_simple.js v3 — MACD(12,26,9) + Stochastic(10,5,5)
+ *
+ * CHANGELOG v3:
+ *   ✅ SL: swing low 20 bar × 0.99 (berbasis struktur harga, bukan ATR murni)
+ *      Safety fallback: kalau swing-based SL >= price, pakai ATR 1.5× cap 7%
+ *   ✅ TP: swing high terdekat dengan R:R >= 1.5 (expand 20→50 bar, fallback ATR×2)
+ *   ✅ getFraksi + roundFraksi tetap berlaku untuk IDX tick compliance
  *
  * BUY RULES  (semua harus terpenuhi):
  *   1. Stoch golden cross dalam 3 bar
  *   2. Stoch %K saat cross < 30 (oversold)
  *   3. MACD histogram > 0 ATAU MACD line > signal
- *   4. IHSG > SMA50 (regime filter)            ← patch #1
- *   5. Avg nilai transaksi 20D ≥ Rp 5 miliar   ← patch #2
- *   6. Volume hari cross ≥ 0.8× avg vol 20D    ← patch #3
+ *   4. IHSG > SMA50 (regime filter)
+ *   5. Avg nilai transaksi 20D >= Rp 5 miliar
+ *   6. Volume hari cross >= 0.8× avg vol 20D
  *
  * POSITION SIZING:
- *   SL   : 1.5 × ATR(14), cap 7%              ← patch #4
- *   TP   : +10% dari entry, full exit          ← patch #5
- *   Size : max 2% risk per trade               ← patch #7
+ *   SL   : swing low 20 bar × 0.99, fallback 1.5×ATR cap 7%
+ *   TP   : swing high terdekat R:R >= 1.5, fallback ATR×2
+ *   Size : max 2% risk per trade
  *   Set PORTFOLIO_IDR via env var (default 100 juta)
  *
  * EXIT RULES:
  *   TP kena         : full exit
  *   SL kena         : full exit
- *   Stoch death cross DAN MACD death cross bersamaan → SELL  ← patch #6
+ *   Stoch death cross DAN MACD death cross bersamaan → SELL
  *   Salah satu saja → WARN (belum exit, siap-siap)
  *
  * Run standalone: node screener_simple.js
@@ -27,7 +33,7 @@
 
 'use strict';
 const axios = require('axios');
-const TI    = require('technicalindicators'); // sama persis seperti complex screener
+const TI    = require('technicalindicators');
 
 // ── Config ────────────────────────────────────────────────────────────────────
 const WATCHLIST = ['AHAP','ARCI','ASHA','ASLI','ASPR','ATAP','AYAM','BAIK','BBYB','BDMN',
@@ -49,16 +55,18 @@ const CFG = {
   OVERBOUGHT:     70,
   CROSS_WINDOW:    3,
   ATR_PERIOD:     14,
-  ATR_MULT:      1.5,    // SL = 1.5 × ATR
-  SL_CAP:        0.07,   // max 7%
-  TP_PCT:        0.10,   // TP +10%
-  MIN_LIQUIDITY: 5_000_000_000,   // Rp 5 miliar
-  VOL_RATIO_MIN: 0.8,    // volume hari cross ≥ 0.8× avg
-  RISK_PER_TRADE: 0.02,  // 2% portfolio per trade
-  FETCH_RANGE:   '5y',   // Fix EMA convergence: 5y → MACD values mendekati TradingView
+  ATR_MULT:      1.5,    // SL fallback = 1.5 × ATR
+  SL_CAP:        0.07,   // max 7% (fallback cap)
+  MIN_LIQUIDITY: 5_000_000_000,
+  VOL_RATIO_MIN: 0.8,
+  RISK_PER_TRADE: 0.02,
+  FETCH_RANGE:   '5y',
+  SL_LOOKBACK:   20,     // swing low lookback (fixed, simple screener tidak punya FASE)
+  SL_BUFFER:     0.99,   // swing low × 0.99
+  TP_MIN_RR:     1.5,    // TP harus memenuhi R:R >= 1.5
+  TP_LOOKBACKS:  [20, 50], // expand jika R:R < 1.5
 };
 
-// Portfolio size — set via env variable di Railway: PORTFOLIO_IDR=500000000
 const PORTFOLIO_IDR = parseInt(process.env.PORTFOLIO_IDR || '100000000');
 
 const HEADERS = {
@@ -68,15 +76,13 @@ const HEADERS = {
   'Cache-Control': 'no-cache',
 };
 
-// ── Module-level IHSG cache ───────────────────────────────────────────────────
-// Diisi oleh runSimpleScreener(), dipakai oleh on-demand /screener-simple/:ticker
 let lastIHSGData = { bullish: true, price: null, sma50: null };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-const sleep      = ms  => new Promise(r => setTimeout(r, ms));
-const safeNum    = (x, def = 0) => Number.isFinite(x) ? x : def;
-const round2     = x   => safeNum(parseFloat(x.toFixed(2)));
-const fmtIDR     = n   => n >= 1e9 ? (n/1e9).toFixed(1)+'M' : n >= 1e6 ? (n/1e6).toFixed(1)+'Jt' : String(n);
+const sleep   = ms  => new Promise(r => setTimeout(r, ms));
+const safeNum = (x, def = 0) => Number.isFinite(x) ? x : def;
+const round2  = x   => safeNum(parseFloat(x.toFixed(2)));
+const fmtIDR  = n   => n >= 1e9 ? (n/1e9).toFixed(1)+'M' : n >= 1e6 ? (n/1e6).toFixed(1)+'Jt' : String(n);
 
 function getFraksi(price) {
   if (price <  200) return 1;
@@ -112,7 +118,7 @@ async function fetchOHLCV(symbol, range = CFG.FETCH_RANGE) {
   return null;
 }
 
-// ── PATCH #1: IHSG Regime (IHSG > SMA50) ─────────────────────────────────────
+// ── IHSG Regime ───────────────────────────────────────────────────────────────
 async function fetchIHSGSimple() {
   const data = await fetchOHLCV('^JKSE', '6mo');
   if (!data) {
@@ -121,35 +127,26 @@ async function fetchIHSGSimple() {
   }
   const { closes } = data;
   if (closes.length < 50) return { bullish: true, price: Math.round(closes.at(-1)), sma50: null };
-
   const last50 = closes.slice(-50);
   const sma50  = last50.reduce((a, b) => a + b, 0) / 50;
   const price  = closes.at(-1);
-  return {
-    bullish: price > sma50,
-    price:   Math.round(price),
-    sma50:   Math.round(sma50),
-  };
+  return { bullish: price > sma50, price: Math.round(price), sma50: Math.round(sma50) };
 }
 
 // ── Stochastic(10,5,5) ────────────────────────────────────────────────────────
 function calculateStoch(highs, lows, closes) {
   const { STOCH_K: kp, STOCH_K_SMOOTH: ks, STOCH_D: ds } = CFG;
-
-  // Step 1: Raw %K
   const rawK = [];
   for (let i = kp - 1; i < closes.length; i++) {
     const hh = Math.max(...highs.slice(i - kp + 1, i + 1));
     const ll = Math.min(...lows.slice(i - kp + 1, i + 1));
     rawK.push(hh === ll ? 50 : (closes[i] - ll) / (hh - ll) * 100);
   }
-  // Step 2: Smooth %K
   const smoothK = [];
   for (let i = ks - 1; i < rawK.length; i++) {
     const s = rawK.slice(i - ks + 1, i + 1);
     smoothK.push(s.reduce((a, b) => a + b, 0) / ks);
   }
-  // Step 3: %D
   const dArr = [];
   for (let i = ds - 1; i < smoothK.length; i++) {
     const s = smoothK.slice(i - ds + 1, i + 1);
@@ -160,10 +157,7 @@ function calculateStoch(highs, lows, closes) {
   return { k: smoothK.slice(smoothK.length - n), d: dArr };
 }
 
-// ── MACD(12,26,9) — Library-based (sama seperti complex screener) ─────────────
-// Manual EMA dihapus: hasilnya tidak akurat karena EMA path-dependent dan butuh
-// data historis sangat panjang untuk konvergen ke nilai TradingView.
-// Library technicalindicators memberikan hasil yang jauh lebih dekat ke TradingView.
+// ── MACD(12,26,9) ─────────────────────────────────────────────────────────────
 function calculateMACD(closes) {
   try {
     const result = TI.MACD.calculate({
@@ -172,17 +166,14 @@ function calculateMACD(closes) {
       SimpleMAOscillator: false, SimpleMASignal: false
     });
     if (!result.length) return null;
-
     const last = result.at(-1);
     const prev = result.length >= 2 ? result.at(-2) : last;
-
     const mNow  = last.MACD      ?? 0;
     const sNow  = last.signal    ?? 0;
     const hNow  = last.histogram ?? 0;
     const mPrev = prev.MACD      ?? 0;
     const sPrev = prev.signal    ?? 0;
     const hPrev = prev.histogram ?? 0;
-
     return {
       macd:        round2(mNow),
       signal:      round2(sNow),
@@ -192,12 +183,10 @@ function calculateMACD(closes) {
       bullish:     mNow > sNow,
       histGrowing: hNow > hPrev,
     };
-  } catch {
-    return null;
-  }
+  } catch { return null; }
 }
 
-// ── PATCH #4: ATR(14) ─────────────────────────────────────────────────────────
+// ── ATR(14) ───────────────────────────────────────────────────────────────────
 function calculateATR(highs, lows, closes, period = CFG.ATR_PERIOD) {
   const trs = [];
   for (let i = 1; i < highs.length; i++) {
@@ -211,18 +200,55 @@ function calculateATR(highs, lows, closes, period = CFG.ATR_PERIOD) {
   return trs.slice(-period).reduce((a, b) => a + b, 0) / period;
 }
 
-// ── SL: 1.5 × ATR, cap 7% ────────────────────────────────────────────────────
-function calcATRSL(price, atr) {
-  const fraksi = getFraksi(price);
-  if (!atr) return roundFraksi(price * (1 - CFG.SL_CAP), fraksi); // fallback cap
-  const slATR = price - atr * CFG.ATR_MULT;
-  const slCap = price * (1 - CFG.SL_CAP);
-  return roundFraksi(Math.max(slATR, slCap), fraksi); // ambil yang lebih besar (SL lebih ketat)
+// ════════════════════════════════════════════════════════════════
+//  calcSwingSL — v3
+//  SL = swing low 20 bar × 0.99 (buffer 1%)
+//  Fallback: 1.5×ATR cap 7% kalau swing-based >= price
+// ════════════════════════════════════════════════════════════════
+function calcSwingSL(price, lows, atr) {
+  const fraksi   = getFraksi(price);
+  const lookback = CFG.SL_LOOKBACK;
+  const slice    = lows.slice(-lookback).filter(v => Number.isFinite(v));
+
+  if (slice.length > 0) {
+    const swingLow = Math.min(...slice);
+    const sl       = roundFraksi(swingLow * CFG.SL_BUFFER, fraksi);
+    if (sl < price) return sl;
+  }
+
+  // Fallback: ATR-based
+  if (atr) {
+    const slATR = price - atr * CFG.ATR_MULT;
+    const slCap = price * (1 - CFG.SL_CAP);
+    return roundFraksi(Math.max(slATR, slCap), fraksi);
+  }
+
+  // Last resort
+  return roundFraksi(price * (1 - CFG.SL_CAP), fraksi);
 }
 
-// ── PATCH #5: TP +10% ─────────────────────────────────────────────────────────
-function calcTP(price) {
-  return roundFraksi(price * (1 + CFG.TP_PCT), getFraksi(price));
+// ════════════════════════════════════════════════════════════════
+//  calcSwingTP — v3
+//  TP = swing high terdekat yang R:R >= 1.5
+//  Expand: coba 20 bar → 50 bar → fallback ATR×2
+// ════════════════════════════════════════════════════════════════
+function calcSwingTP(price, sl, highs, atr) {
+  const fraksi = getFraksi(price);
+  const risk   = price - sl;
+  if (risk <= 0) return roundFraksi(price + (atr || price * 0.05) * 2, fraksi);
+
+  for (const lookback of CFG.TP_LOOKBACKS) {
+    const slice = highs.slice(-lookback).filter(v => Number.isFinite(v));
+    if (!slice.length) continue;
+    const swingHigh = Math.max(...slice);
+    // Sedikit di bawah resistance (tidak tepat di resistance)
+    const tp  = roundFraksi(swingHigh * 1.005, fraksi);
+    const rr  = safeNum(parseFloat(((tp - price) / risk).toFixed(2)));
+    if (rr >= CFG.TP_MIN_RR && tp > price) return tp;
+  }
+
+  // Fallback: ATR × 2
+  return roundFraksi(price + (atr || price * 0.05) * 2, fraksi);
 }
 
 // ── CHG% ─────────────────────────────────────────────────────────────────────
@@ -245,7 +271,7 @@ function detectCross(k, d, window = CFG.CROSS_WINDOW) {
   return { type: null, barsAgo: null, kAtCross: null, dAtCross: null };
 }
 
-// ── PATCH #2: Liquidity check ─────────────────────────────────────────────────
+// ── Liquidity check ───────────────────────────────────────────────────────────
 function checkLiquidity(closes, volumes, lookback = 20) {
   const n = Math.min(closes.length, volumes.length, lookback);
   if (n < 10) return { ok: false, avgValue: 0, label: 'ILIKUID' };
@@ -259,15 +285,12 @@ function checkLiquidity(closes, volumes, lookback = 20) {
   return { ok: avg >= CFG.MIN_LIQUIDITY, avgValue: Math.round(avg), label };
 }
 
-// ── PATCH #3: Volume on cross day ─────────────────────────────────────────────
+// ── Volume on cross day ───────────────────────────────────────────────────────
 function checkVolumeOnCross(volumes, cross) {
   if (!cross || cross.type === null || cross.barsAgo === null) return true;
   const n = volumes.length;
-  if (n < 22) return true; // tidak cukup data, skip
-
-  // Volume di bar saat cross
+  if (n < 22) return true;
   const volAtCross = volumes[n - 1 - cross.barsAgo];
-  // Avg vol 20 hari sebelum cross bar
   const sliceEnd   = n - cross.barsAgo;
   const sliceStart = Math.max(0, sliceEnd - 20);
   const volSlice   = volumes.slice(sliceStart, sliceEnd);
@@ -276,14 +299,14 @@ function checkVolumeOnCross(volumes, cross) {
   return avgVol > 0 ? volAtCross >= avgVol * CFG.VOL_RATIO_MIN : true;
 }
 
-// ── PATCH #7: Position Sizing (2% risk per trade) ─────────────────────────────
+// ── Position Sizing (2% risk per trade) ──────────────────────────────────────
 function calcPositionSize(price, sl) {
   if (!sl || sl >= price || PORTFOLIO_IDR <= 0) return null;
   const riskIDR    = PORTFOLIO_IDR * CFG.RISK_PER_TRADE;
   const slPerShare = price - sl;
   if (slPerShare <= 0) return null;
   const maxShares  = Math.floor(riskIDR / slPerShare);
-  const maxLots    = Math.floor(maxShares / 100);  // 1 lot IDX = 100 saham
+  const maxLots    = Math.floor(maxShares / 100);
   if (maxLots <= 0) return { lots: 0, totalValue: 0, actualRisk: 0, actualRiskPct: 0 };
   const totalValue    = maxLots * 100 * price;
   const actualRisk    = maxLots * 100 * slPerShare;
@@ -291,8 +314,7 @@ function calcPositionSize(price, sl) {
   return { lots: maxLots, totalValue: Math.round(totalValue), actualRisk: Math.round(actualRisk), actualRiskPct };
 }
 
-// ── Signal Logic (indicator-only, tanpa filter) ────────────────────────────────
-// Filter diterapkan terpisah di applyBuyFilters().
+// ── Signal Logic ──────────────────────────────────────────────────────────────
 function getSignal(stoch, macd) {
   if (!stoch || !macd) return { aksi: 'NO_DATA', label: '', strength: 0, detail: '' };
 
@@ -302,7 +324,6 @@ function getSignal(stoch, macd) {
   const cross     = detectCross(k, d);
   const stochDead = cross.type === 'DEATH';
 
-  // ── PATCH #6: SELL hanya kalau KEDUANYA death cross ─────────────────────
   if (macd.deathCross && stochDead) {
     const zone = kNow > CFG.OVERBOUGHT ? 'Overbought' : 'Mid-Zone';
     return {
@@ -313,7 +334,6 @@ function getSignal(stoch, macd) {
     };
   }
 
-  // Salah satu death → WARN (siap-siap exit, belum eksekusi)
   if (macd.deathCross && !stochDead) {
     return {
       aksi: 'WARN',
@@ -332,7 +352,6 @@ function getSignal(stoch, macd) {
     };
   }
 
-  // ── BUY signals ──────────────────────────────────────────────────────────
   if (cross.type === 'GOLDEN') {
     const fromOversold = cross.kAtCross < CFG.OVERSOLD || kNow < CFG.OVERSOLD + 5;
     const macdOk       = macd.bullish || macd.goldenCross || (macd.histGrowing && macd.hist > -1);
@@ -367,7 +386,6 @@ function getSignal(stoch, macd) {
     }
   }
 
-  // ── WATCH: mendekati oversold ─────────────────────────────────────────────
   if (kNow < 25 && kNow > dNow) {
     return { aksi: 'WATCH', strength: 1, label: 'Stoch Mendekati Oversold', detail: `K:${kNow.toFixed(1)} D:${dNow.toFixed(1)} — hampir golden` };
   }
@@ -378,42 +396,26 @@ function getSignal(stoch, macd) {
   return { aksi: 'HOLD', label: '', strength: 0, detail: '' };
 }
 
-// ── Apply filters ke BUY signal (poin #1 #2 #3) ──────────────────────────────
-// BEAR EXCEPTION: strength 3 (SUPER — dual golden cross dari oversold) lolos
-// meskipun IHSG < SMA50. Rare event, high-quality setup.
+// ── Apply filters ke BUY signal ───────────────────────────────────────────────
 function applyBuyFilters(signal, filters) {
-  if (signal.aksi !== 'BUY') return signal; // filter hanya berlaku untuk BUY
-
+  if (signal.aksi !== 'BUY') return signal;
   const blocked = [];
-
-  // Hard filters (tidak ada exception)
   if (!filters.liquidityOk)  blocked.push(`Likuiditas ${filters.liquidityLabel}`);
   if (!filters.volumeOk)     blocked.push('Volume < 0.8× avg');
-
-  // IHSG regime: strength 3 (SUPER) dapat exception
-  if (!filters.ihsgBullish && signal.strength < 3) {
-    blocked.push('IHSG < SMA50');
-  }
-
+  if (!filters.ihsgBullish && signal.strength < 3) blocked.push('IHSG < SMA50');
   if (blocked.length === 0) {
-    // Lolos semua filter — kalau via BEAR exception, tandai
     if (!filters.ihsgBullish) {
-      return {
-        ...signal,
-        detail:      `⚡ BEAR OUTLIER (IHSG<SMA50) — ${signal.detail}`,
-        bearOutlier: true,
-      };
+      return { ...signal, detail: `⚡ BEAR OUTLIER (IHSG<SMA50) — ${signal.detail}`, bearOutlier: true };
     }
     return signal;
   }
-
   return {
     ...signal,
     aksi:      'BLOCKED',
     blockedBy: blocked,
-    label:     signal.label,                            // label asli tetap
+    label:     signal.label,
     detail:    `Gagal filter: ${blocked.join(' · ')}`,
-    setupOk:   true, // setup teknikal valid, tapi diblokir filter
+    setupOk:   true,
   };
 }
 
@@ -428,50 +430,45 @@ async function screenSimpleStock(ticker, ihsgData = null) {
   const macd  = calculateMACD(closes);
   if (!stoch || !macd) return { ticker, ok: false, error: 'Data tidak cukup' };
 
-  // Indikator tambahan
   const atr       = calculateATR(highs, lows, closes);
   const liquidity = checkLiquidity(closes, volumes);
   const cross     = detectCross(stoch.k, stoch.d);
   const volumeOk  = checkVolumeOnCross(volumes, cross);
 
-  // Raw signal (indicator-only)
   const rawSignal = getSignal(stoch, macd);
 
-  // Apply filters
   const ihsg   = ihsgData || lastIHSGData;
   const signal = applyBuyFilters(rawSignal, {
-    ihsgBullish:   ihsg.bullish,
-    liquidityOk:   liquidity.ok,
+    ihsgBullish:    ihsg.bullish,
+    liquidityOk:    liquidity.ok,
     liquidityLabel: liquidity.label,
     volumeOk,
   });
 
-  // Risk management
-  const sl    = calcATRSL(price, atr);
-  const tp    = calcTP(price);
+  // ── v3: SL/TP berbasis swing structure ─────────────────────────────────────
+  const sl    = calcSwingSL(price, lows, atr);
+  const tp    = calcSwingTP(price, sl, highs, atr);
+  const risk  = price - sl;
+  const rr    = risk > 0 ? round2((tp - price) / risk) : 0;
   const slPct = round2((price - sl) / price * 100);
   const tpPct = round2((tp - price) / price * 100);
 
-  // Position sizing
   const posSize = calcPositionSize(price, sl);
 
   return {
     ticker, ok: true,
     price: Math.round(price),
     chg:   calcCHG(price, prevClose),
-    // Stoch
     stochK:     round2(stoch.k.at(-1)),
     stochD:     round2(stoch.d.at(-1)),
     stochKPrev: round2(stoch.k.at(-2)),
     stochDPrev: round2(stoch.d.at(-2)),
-    // MACD
     macd:        macd.macd,
     macdSig:     macd.signal,
     hist:        macd.hist,
     macdBullish: macd.bullish,
     macdGolden:  macd.goldenCross,
     macdDeath:   macd.deathCross,
-    // Signal
     aksi:      signal.aksi,
     label:     signal.label,
     strength:  signal.strength,
@@ -479,15 +476,12 @@ async function screenSimpleStock(ticker, ihsgData = null) {
     blockedBy: signal.blockedBy || [],
     setupOk:   signal.setupOk   || false,
     bearOutlier: signal.bearOutlier || false,
-    // Risk management
     atr:    atr ? round2(atr) : null,
-    sl, slPct, tp, tpPct,
-    // Position sizing
-    lots:        posSize?.lots        ?? null,
-    totalValue:  posSize?.totalValue  ?? null,
-    actualRisk:  posSize?.actualRisk  ?? null,
+    sl, slPct, tp, tpPct, rr,
+    lots:          posSize?.lots          ?? null,
+    totalValue:    posSize?.totalValue    ?? null,
+    actualRisk:    posSize?.actualRisk    ?? null,
     actualRiskPct: posSize?.actualRiskPct ?? null,
-    // Filter metadata
     liquidity:    liquidity.label,
     avgValueIDR:  liquidity.avgValue,
     volumeOk,
@@ -499,14 +493,13 @@ async function screenSimpleStock(ticker, ihsgData = null) {
 async function runSimpleScreener() {
   const now = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
   console.log('\n' + '═'.repeat(76));
-  console.log('SCREENER SIMPLE v2 (MACD + Stoch 10,5,5) — ' + now);
-  console.log(`Portfolio: Rp ${fmtIDR(PORTFOLIO_IDR)} | SL: 1.5×ATR cap 7% | TP: +10% | Risk: 2%/trade`);
+  console.log('SCREENER SIMPLE v3 (MACD + Stoch 10,5,5) — ' + now);
+  console.log(`Portfolio: Rp ${fmtIDR(PORTFOLIO_IDR)} | SL: Swing Low 20 bar × 0.99 | TP: Swing High R:R≥1.5 | Risk: 2%/trade`);
   console.log('═'.repeat(76));
 
-  // Fetch IHSG dulu untuk regime filter
   process.stdout.write('Fetching IHSG regime...\r');
   const ihsgData  = await fetchIHSGSimple();
-  lastIHSGData    = ihsgData; // cache di module level
+  lastIHSGData    = ihsgData;
   const regimeMark = ihsgData.bullish ? '🟢' : '🔴';
   const regimeText = ihsgData.bullish
     ? 'BULLISH — filter aktif normal'
@@ -524,7 +517,6 @@ async function runSimpleScreener() {
   const sukses = Object.values(results).filter(r => r.ok).length;
   console.log(`\nScan selesai — ${sukses}/${WATCHLIST.length} saham berhasil\n`);
 
-  // ─ BUY ─
   const buyList = Object.values(results)
     .filter(r => r.ok && r.aksi === 'BUY')
     .sort((a, b) => b.strength - a.strength || b.chg - a.chg);
@@ -538,12 +530,11 @@ async function runSimpleScreener() {
     buyList.forEach(r => {
       const str = '★'.repeat(r.strength);
       const lot = r.lots ? `| Lot:${r.lots} (Rp ${fmtIDR(r.totalValue)})` : '';
-      console.log(`  ${r.ticker.padEnd(6)} ${str.padEnd(4)} | Harga:${r.price} | SL:${r.sl}(-${r.slPct}%) | TP:${r.tp}(+${r.tpPct}%) ${lot}`);
+      console.log(`  ${r.ticker.padEnd(6)} ${str.padEnd(4)} | Harga:${r.price} | SL:${r.sl}(-${r.slPct}%) | TP:${r.tp}(+${r.tpPct}%) | R:R ${r.rr} ${lot}`);
       console.log(`         └─ ${r.label} | K:${r.stochK} D:${r.stochD} | MACD:${r.hist>0?'+':''}${r.hist} | ${r.liquidity}`);
     });
   }
 
-  // ─ SELL ─
   const sellList = Object.values(results)
     .filter(r => r.ok && r.aksi === 'SELL')
     .sort((a, b) => b.strength - a.strength);
@@ -560,7 +551,6 @@ async function runSimpleScreener() {
     });
   }
 
-  // ─ WARN ─
   const warnList = Object.values(results)
     .filter(r => r.ok && r.aksi === 'WARN')
     .sort((a, b) => b.strength - a.strength);
@@ -577,7 +567,6 @@ async function runSimpleScreener() {
     });
   }
 
-  // ─ BLOCKED ─
   const blockedList = Object.values(results)
     .filter(r => r.ok && r.aksi === 'BLOCKED')
     .sort((a, b) => b.strength - a.strength);
@@ -594,7 +583,6 @@ async function runSimpleScreener() {
     });
   }
 
-  // ─ WATCH ─
   const watchList = Object.values(results)
     .filter(r => r.ok && r.aksi === 'WATCH')
     .sort((a, b) => a.stochK - b.stochK);

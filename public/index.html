@@ -187,7 +187,7 @@ tr.dr{cursor:pointer}tr.dr:hover td{background:#1a1a1a}tr.sel td{background:#0a1
 </div>
 <div class="tab-row">
   <button class="tab-btn active-simple" id="tabSimple" onclick="switchTab('simple')">⚡ Simple — MACD + Stoch(10,5,5)</button>
-  <button class="tab-btn" id="tabComplex" onclick="switchTab('complex')">🔬 Complex — Multi-Indikator v7</button>
+  <button class="tab-btn" id="tabComplex" onclick="switchTab('complex')">🔬 Complex — Multi-Indikator v8</button>
 </div>
 <div class="prog"><div class="prog-fill simple" id="progFill" style="width:0%"></div></div>
 
@@ -240,7 +240,7 @@ tr.dr{cursor:pointer}tr.dr:hover td{background:#1a1a1a}tr.sel td{background:#0a1
   <div class="note"><strong>v2:</strong> SL = 1.5×ATR(14) · TP = +10% · <strong>Bukan rekomendasi investasi.</strong></div>
 </div>
 
-<!-- COMPLEX VIEW v7 -->
+<!-- COMPLEX VIEW v8 -->
 <div id="viewComplex" style="display:none">
   <div class="regime-box">
     <span class="regime-lbl">IHSG Regime</span>
@@ -314,7 +314,7 @@ tr.dr{cursor:pointer}tr.dr:hover td{background:#1a1a1a}tr.sel td{background:#0a1
     </div>
     <div class="tv-wrap" id="tvWrap"></div>
   </div>
-  <div class="note"><strong>v7:</strong> ANTRI = pasang limit order (tampil dua level harga) · MISS = cek Telegram · WAIT = pantau · EXIT = hindari. <strong>Bukan rekomendasi investasi.</strong></div>
+  <div class="note"><strong>v8:</strong> ANTRI = pasang limit order (gate diperketat: PWR≥3, R:R≥1.5, BEAR diblokir) · SL/TP berbasis swing structure · MISS = cek Telegram · WAIT = pantau · EXIT = hindari. <strong>Bukan rekomendasi investasi.</strong></div>
 </div>
 </div>
 
@@ -355,7 +355,7 @@ function sStartCD(){if(sCdInt)clearInterval(sCdInt);sCdN=30;sCdInt=setInterval(f
 function sAddStock(){var inp=document.getElementById('sAddInp');var v=inp.value.trim().toUpperCase().replace('.JK','').replace(/[^A-Z0-9]/g,'');if(!v){inp.value='';return;}inp.value='';sCache[v]={ticker:v,ok:false,error:'Loading...'};sRender();fetch('/screener-simple/'+v).then(function(r){return r.json();}).then(function(d){sCache[v]=d;sRender();}).catch(function(e){sCache[v]={ticker:v,ok:false,error:e.message};sRender();});}
 document.getElementById('sAddInp').addEventListener('keydown',function(e){if(e.key==='Enter')sAddStock();});
 
-// COMPLEX v7 — ANTRI
+// COMPLEX v8
 var cache={},regime={},sel=null,fType='entryType',fVal='ALL',sKey='entryType',sAsc=true,cdInt=null,cdN=30;
 var ET={ANTRI:0,MISS:1,WAIT:2,EXIT:3};
 var FO={BREAKOUT:0,REBOUND:1,SIDEWAYS:2,BREAKDOWN:3};
@@ -368,7 +368,7 @@ function getEntryType(d){
   if(d.category==='LIMIT_SETUP'){
     var e2=d.levels&&d.levels.e2?d.levels.e2.rr:null;
     var e3=d.levels&&d.levels.e3?d.levels.e3.rr:null;
-    if((e2!=null&&e2>=1.0)||(e3!=null&&e3>=1.5))return'ANTRI';
+    if((e2!=null&&e2>=1.5)||(e3!=null&&e3>=2.0))return'ANTRI';
   }
   return'WAIT';
 }

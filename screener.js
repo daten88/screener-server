@@ -7,8 +7,8 @@ const {
   calculateWick, calculateBDR,
   calculatePWR, calculateFASE,
   calculateAKSI, calculateTPSL, calculateEntry,
-  inferPineStatus,       // ✅ NEW v7
-  formatScreenerOutput,  // ✅ NEW v7
+  inferPineStatus,
+  formatScreenerOutput,
   calculateLiquidity, getLiquidityStatus,
   calculateRegime, applyFilters
 } = require('./indicators');
@@ -117,7 +117,6 @@ async function screenStock(ticker, regimeInfo){
     rvol, fase, rsi
   });
 
-  // ✅ NEW v7 — formatScreenerOutput
   const screenerOut = formatScreenerOutput({
     ticker, price, tp, sl, e1, e2, e3,
     pwr, bdr: bdr.label, fase, chg, rvol, rsi,
@@ -146,28 +145,23 @@ async function screenStock(ticker, regimeInfo){
     pwr,
     fase,
 
-    // ✅ v7: aksi internal (HAKA bisa ada, tapi tidak ditampilkan langsung)
     aksi:         aksiRaw,
     _aksiInternal: aksiRaw,
 
-    // ✅ v7: categories dari formatScreenerOutput
-    category:       screenerOut.category,       // MISSED_HAKA|LIMIT_SETUP|WATCH|SKIP|SELL
+    category:       screenerOut.category,
     actionText:     screenerOut.actionText,
-    confidence:     screenerOut.confidence,      // HIGH|MEDIUM|LOW|CRITICAL
+    confidence:     screenerOut.confidence,
     recommendation: screenerOut.recommendation,
     pineSent:       screenerOut.pine.sent,
     pineReason:     screenerOut.pine.reason,
     levels:         screenerOut.levels,
 
-    // Filter context
     warnings:   filtered.warnings,
     rr:         filtered.rr,
     severityScore: filtered.severityScore,
 
-    // TP/SL/Entry (backward compat)
     tp, sl, e1, e2, e3,
 
-    // Liquidity & SMA
     liquidity:    liquidityStatus.label,
     avgValueIDR:  Math.round(liquidity.avgValue),
     aboveSMA50:   filtered.aboveSMA50,

@@ -123,7 +123,8 @@ async function screenStock(ticker, regimeInfo){
     liquidityStatus,
     regime: regimeInfo.regime,
     aksi: aksiRaw,
-    filterResult: filtered
+    filterResult: filtered,
+    goldenCross
   });
 
   const rsiSig       = getRSISignal(rsi);

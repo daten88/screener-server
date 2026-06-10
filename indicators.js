@@ -233,7 +233,7 @@ function formatScreenerOutput(ctx){
     ticker,price,tp,sl,e1,e2,e3,
     pwr,bdr,fase,chg,rvol,rsi,
     liquidityStatus,regime,
-    aksi,filterResult
+    aksi,filterResult,goldenCross
   }=ctx;
 
   const pine=inferPineStatus(aksi,price,tp,sl,rsi);
@@ -266,8 +266,11 @@ function formatScreenerOutput(ctx){
     const pwrOk=pwr>=3;
     const rrOk=(rrE2&&rrE2>=1.5)||(rrE3&&rrE3>=2.0);
     // BEAR exception: bottom bounce setup kuat boleh lolos dengan warning
-    const bearException=regime==='BEAR'&&pwr>=4&&
-                        (fase==='BREAKOUT'||fase==='REBOUND')&&rvol>=1.5;
+    // BREAKOUT/REBOUND: PWR>=4 + RVOL>=1.5
+    // SIDEWAYS: PWR>=4 + RVOL>=1.5 + Golden Cross wajib (konfirmasi momentum)
+    const bearException=regime==='BEAR'&&pwr>=4&&rvol>=1.5&&
+                        (fase==='BREAKOUT'||fase==='REBOUND'||
+                        (fase==='SIDEWAYS'&&goldenCross===true));
     const regimeOk=regime!=='BEAR'||bearException;
 
     if(faseOk&&pwrOk&&rrOk&&regimeOk){

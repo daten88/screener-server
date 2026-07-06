@@ -6,11 +6,12 @@ const {
   calculateATR, calculateCHG,
   calculateWick, calculateBDR,
   calculatePWR, calculateFASE,
-  calculateAKSI, calculateTPSL, calculateEntry,
+  calculateAKSI,
   inferPineStatus,
   formatScreenerOutput,
   calculateLiquidity, getLiquidityStatus,
-  calculateRegime, applyFilters
+  calculateRegime, applyFilters,
+  calculateWINEntry, calculateRR
 } = require('./indicators');
 
 const WATCHLIST = ['ADMR','AHAP','AMMN','ARCI','BGTG','BIPI','BMRI','BNBR','BRMS','BRPT','BULL','BUMI','BUVA','CTTH',
@@ -95,8 +96,9 @@ async function screenStock(ticker, regimeInfo){
   const fase = calculateFASE(rsi, macd, macdSig, chg, wick, hist);
   const aksiRaw = calculateAKSI(rsi, macd, macdSig, rvol, chg, pwr, fase, goldenCross, deathCross, bdr.label, zone);
 
-  const { tp, sl } = calculateTPSL(price, atr, fase, aksiRaw, highs, lows);
-  const { e1, e2, e3 } = calculateEntry(price, atr, fase, aksiRaw, highs, lows);
+  // ── WIN Line-based Entry + SL + TP ────────────────────────────────────
+  const winCalc = calculateWINEntry(highs, lows, closes, price);
+  const { winLine, e1, e2, e3, sl, tp, tp2 } = winCalc;
 
   const liquidity       = calculateLiquidity(closes, volumes);
   const liquidityStatus = getLiquidityStatus(liquidity, MIN_LIQUIDITY_IDR);
@@ -126,6 +128,11 @@ async function screenStock(ticker, regimeInfo){
   const rvolSig      = getRVOLSignal(rvol);
   const zoneLabel    = getZoneLabel(zone);
 
+  // R:R kalkulasi dari WIN line perspective
+  const rrE1 = calculateRR(e1, tp, sl, 'BUY');
+  const rrE2 = calculateRR(e2, tp, sl, 'BUY');
+  const rrE3 = calculateRR(e3, tp, sl, 'BUY');
+
   return {
     ticker,
     ok: true,
@@ -151,11 +158,15 @@ async function screenStock(ticker, regimeInfo){
     pineReason:     screenerOut.pine.reason,
     levels:         screenerOut.levels,
 
-    warnings:   filtered.warnings,
-    rr:         filtered.rr,
+    warnings:      filtered.warnings,
+    rr:            rrE1,
     severityScore: filtered.severityScore,
 
-    tp, sl, e1, e2, e3,
+    // ── WIN Line entry levels ──────────────────────────────────────────
+    winLine,
+    tp, tp2, sl,
+    e1, e2, e3,
+    rrE1, rrE2, rrE3,
 
     liquidity:    liquidityStatus.label,
     avgValueIDR:  Math.round(liquidity.avgValue),
@@ -177,7 +188,7 @@ function fmtIDR(n){
 async function runScreener(){
   const now = new Date().toLocaleString('id-ID', { timeZone:'Asia/Jakarta' });
   console.log('\n' + '='.repeat(78));
-  console.log('SCREENER SAHAM IDX v3 - ' + now);
+  console.log('SCREENER SAHAM IDX v4 - WIN Line Entry - ' + now);
   console.log('='.repeat(78));
 
   process.stdout.write('Fetching IHSG untuk market regime...\r');
@@ -188,6 +199,7 @@ async function runScreener(){
     + (regimeInfo.sma50  ? ` | SMA50: ${Math.round(regimeInfo.sma50)}` : '')
     + (regimeInfo.sma200 ? ` | SMA200: ${Math.round(regimeInfo.sma200)}` : '')
     + ` | RSI: ${regimeInfo.rsi}`);
+  console.log('  Entry: WIN Line + 1 tik | SL: Low hari ini - 1 tik | TP: Swing High 20 bar');
   console.log('-'.repeat(78));
 
   const results = {};
@@ -208,12 +220,11 @@ async function runScreener(){
   if(!missedHaka.length){
     console.log('  Tidak ada MISSED_HAKA saat ini.');
   }else{
-    missedHaka.sort((a,b) => b.rr - a.rr);
+    missedHaka.sort((a,b) => b.rrE1 - a.rrE1);
     missedHaka.forEach(r => {
       console.log(
         `  ${r.ticker.padEnd(6)} | ${r.confidence.padEnd(8)} | ${r.fase.padEnd(9)} | ` +
-        `PWR:${r.pwr} | R:R ${r.rr} | ${r.liquidity.padEnd(7)} | ` +
-        `Harga:${r.price} | TP:${r.tp} | SL:${r.sl}`
+        `PWR:${r.pwr} | WIN:${r.winLine} | E1:${r.e1}(${r.rrE1}) E2:${r.e2}(${r.rrE2}) | SL:${r.sl} | TP:${r.tp}`
       );
       console.log(`         💡 ${r.actionText}`);
       if(r.warnings.length) r.warnings.forEach(w => console.log(`         ⚠  ${w}`));
@@ -222,19 +233,17 @@ async function runScreener(){
 
   // ═══ 📌 LIMIT SETUP ═══════════════════════════════════════════════════
   console.log('\n' + '─'.repeat(78));
-  console.log('📌 LIMIT SETUP (Pine skip, tapi E2/E3 menarik untuk antri):');
+  console.log('📌 LIMIT SETUP (Pine skip, tapi setup menarik untuk antri):');
   console.log('─'.repeat(78));
   const limitSetup = Object.values(results).filter(r => r.ok && r.category === 'LIMIT_SETUP');
   if(!limitSetup.length){
     console.log('  Tidak ada LIMIT_SETUP saat ini.');
   }else{
-    limitSetup.sort((a,b) => (b.levels?.e2?.rr || 0) - (a.levels?.e2?.rr || 0));
+    limitSetup.sort((a,b) => b.rrE2 - a.rrE2);
     limitSetup.forEach(r => {
-      const e2rr = r.levels?.e2?.rr || '-';
-      const e3rr = r.levels?.e3?.rr || '-';
       console.log(
         `  ${r.ticker.padEnd(6)} | ${r.confidence.padEnd(8)} | ${r.fase.padEnd(9)} | ` +
-        `PWR:${r.pwr} | E2:${r.e2}(R:R ${e2rr}) | E3:${r.e3}(R:R ${e3rr}) | SL:${r.sl}`
+        `PWR:${r.pwr} | WIN:${r.winLine} | E2:${r.e2}(${r.rrE2}) E3:${r.e3}(${r.rrE3}) | SL:${r.sl} | TP:${r.tp}`
       );
       console.log(`         💡 ${r.actionText}`);
       if(r.pineReason) console.log(`         🔕 Pine: ${r.pineReason}`);
@@ -270,11 +279,11 @@ async function runScreener(){
   if(!watchList.length){
     console.log('  Tidak ada.');
   }else{
-    watchList.sort((a,b) => b.rr - a.rr);
+    watchList.sort((a,b) => b.rrE1 - a.rrE1);
     watchList.slice(0,10).forEach(r => {
       console.log(
         `  ${r.ticker.padEnd(6)} | ${r.confidence.padEnd(8)} | ${r.fase.padEnd(9)} | ` +
-        `PWR:${r.pwr} | R:R ${r.rr} | Harga:${r.price}`
+        `PWR:${r.pwr} | WIN:${r.winLine} | E1:${r.e1}(${r.rrE1}) | SL:${r.sl} | TP:${r.tp}`
       );
     });
   }

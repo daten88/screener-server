@@ -1,20 +1,5 @@
 const TI = require('technicalindicators');
 
-// ════════════════════════════════════════════════════════════════
-//  indicators.js — v8
-//
-//  CHANGELOG v8:
-//  ✅ findSwingLow: adaptif lookback (BREAKOUT=10, lainnya=20)
-//  ✅ findSwingHighForTP: cari swing high terdekat dengan R:R >= 1.5
-//     expand 20 → 50 bar, fallback ATR×2
-//  ✅ calculateTPSL: rebuilt berbasis swing structure, bukan ATR murni
-//  ✅ formatScreenerOutput: gate ANTRI diperketat
-//     - PWR >= 3 wajib
-//     - FASE: BREAKOUT/REBOUND bebas, SIDEWAYS butuh PWR>=4 atau PWR>=3+RVOL>=1.5
-//     - R:R: E2 >= 1.5 atau E3 >= 2.0
-//     - Regime BEAR = blokir total
-// ════════════════════════════════════════════════════════════════
-
 function safeNum(x, def=0){
   return Number.isFinite(x) ? x : def;
 }
@@ -216,24 +201,12 @@ function inferPineStatus(aksi,price,tp,sl,rsi){
   return{pineSent:sent,pineReason:sent?null:reasons.join(' | '),rrE1:rr};
 }
 
-// ════════════════════════════════════════════════════════════════
-//  formatScreenerOutput — v8.1
-//
-//  Gate ANTRI:
-//  - PWR >= 3 wajib
-//  - FASE: BREAKOUT/REBOUND bebas masuk
-//          SIDEWAYS: butuh PWR>=4 ATAU (PWR>=3 + RVOL>=1.5)
-//  - R:R: E2 >= 1.5 ATAU E3 >= 2.0
-//  - Regime BEAR: boleh lolos kalau PWR>=4 + FASE BREAKOUT/REBOUND + RVOL>=1.5
-//    (bottom bounce exception) → actionText diberi warning kurangi size 50%
-//  ILIKUID tetap warning saja, bukan blocker
-// ════════════════════════════════════════════════════════════════
 function formatScreenerOutput(ctx){
   const{
     ticker,price,tp,sl,e1,e2,e3,
     pwr,bdr,fase,chg,rvol,rsi,
     liquidityStatus,regime,
-    aksi,filterResult,goldenCross
+    aksi,filterResult
   }=ctx;
 
   const pine=inferPineStatus(aksi,price,tp,sl,rsi);
@@ -243,63 +216,29 @@ function formatScreenerOutput(ctx){
 
   let category,actionText;
 
-  // ── Sinyal bearish → EXIT
   if(aksi==='SELL'){
     category='SELL';
     actionText='Setup bearish — hindari BUY, pertimbangkan exit posisi';
-
-  // ── Pine sudah kirim HAKA, harga belum jauh
   }else if(pine.pineSent&&chg<=5){
     category='MISSED_HAKA';
     actionText=`HAKA sudah terkirim. ${rrE2?`Masih bisa antri E2 @ ${e2} (R:R ${rrE2})`:'Cek apakah masih layak entry.'}`;
-
-  // ── Pine kirim HAKA tapi harga sudah naik jauh
   }else if(pine.pineSent&&chg>5){
     category='WATCH';
     actionText=`HAKA terkirim tapi harga sudah naik ${chg}%. Tunggu pullback.`;
-
-  // ── Pine skip — evaluasi gate ANTRI
-  }else if(!pine.pineSent){
-    const faseOk=(fase==='BREAKOUT'||fase==='REBOUND')||
-                 (fase==='SIDEWAYS'&&pwr>=4)||
-                 (fase==='SIDEWAYS'&&pwr>=3&&rvol>=1.5);
-    const pwrOk=pwr>=3;
-    const rrOk=(rrE2&&rrE2>=1.5)||(rrE3&&rrE3>=2.0);
-    // BEAR exception: bottom bounce setup kuat boleh lolos dengan warning
-    // BREAKOUT/REBOUND: PWR>=4 + RVOL>=1.5
-    // SIDEWAYS: PWR>=4 + RVOL>=1.5 + Golden Cross wajib (konfirmasi momentum)
-    const bearException=regime==='BEAR'&&pwr>=4&&rvol>=1.5&&
-                        (fase==='BREAKOUT'||fase==='REBOUND'||
-                        (fase==='SIDEWAYS'&&goldenCross===true));
-    const regimeOk=regime!=='BEAR'||bearException;
-
-    if(faseOk&&pwrOk&&rrOk&&regimeOk){
-      category='LIMIT_SETUP';
-      const useE3=rrE3&&rrE3>=2.0&&(!rrE2||rrE2<1.5);
-      actionText=useE3
-        ?`Pine skip (${pine.pineReason}). Antri @ ${e3} (R:R ${rrE3}).`
-        :`Pine skip (${pine.pineReason}). Antri @ ${e2} (R:R ${rrE2}).`;
-      // Tambah warning kalau lolos via BEAR exception
-      if(bearException){
-        actionText+=' · ⚠️ BEAR REGIME — kurangi size 50%';
-      }
-    }else{
-      category='WATCH';
-      actionText='Setup belum cukup kuat untuk ANTRI. Pantau.';
-    }
-
-  // ── BUY tapi tidak memenuhi HAKA criteria
+  }else if(!pine.pineSent&&(rrE3&&rrE3>=1.5)){
+    category='LIMIT_SETUP';
+    actionText=`Pine skip (${pine.pineReason}). Antri @ ${e3} (R:R ${rrE3}).`;
+  }else if(!pine.pineSent&&(rrE2&&rrE2>=1.0)){
+    category='LIMIT_SETUP';
+    actionText=`Pine skip (${pine.pineReason}). Antri @ ${e2} (R:R ${rrE2}).`;
   }else if(aksi==='BUY'){
     category='WATCH';
     actionText='Setup BUY tapi belum HAKA quality. Pantau konfirmasi lanjutan.';
-
-  // ── HOLD / tidak ada setup
   }else{
     category='WATCH';
     actionText='Belum ada setup actionable. Pantau.';
   }
 
-  // ── Likuiditas rendah = tambah WARNING saja, tidak blokir sinyal
   if(!liquidityStatus.ok){
     actionText=(actionText?actionText+' · ':'')+
       `⚠️ ${liquidityStatus.label} — sesuaikan position size`;
@@ -419,70 +358,70 @@ function roundToFraksi(price,fraksi){
 }
 
 // ════════════════════════════════════════════════════════════════
-//  findSwingLow — adaptif lookback
-//  BREAKOUT = 10 bar (SL ketat, momentum kuat)
-//  REBOUND / SIDEWAYS = 20 bar (SL lebih lebar, struktur lebih luas)
+//  WIN LINE — EMA dari HLC3 (konsisten dengan Pine Script v9.0)
 // ════════════════════════════════════════════════════════════════
-function findSwingLow(lows, lookback){
-  const slice=lows.slice(-lookback).filter(v=>isFinite(v));
-  if(!slice.length) return lows.at(-1)||0;
-  return Math.min(...slice);
-}
-
-// ════════════════════════════════════════════════════════════════
-//  findSwingHighForTP — cari resistance terdekat dengan R:R >= minRR
-//  Urutan: coba 20 bar → expand ke 50 bar → fallback ATR multiplier
-// ════════════════════════════════════════════════════════════════
-function findSwingHighForTP(price, sl, highs, atr, minRR=1.5){
-  const fraksi=getFraksi(price);
-  const risk=price-sl;
-  if(risk<=0) return null;
-
-  for(const lookback of [20,50]){
-    const slice=highs.slice(-lookback).filter(v=>isFinite(v));
-    if(!slice.length) continue;
-    const swingHigh=Math.max(...slice);
-    // Sedikit di bawah resistance (tidak tepat di resistance)
-    const tp=roundToFraksi(swingHigh*1.005,fraksi);
-    const rr=safeNum(parseFloat(((tp-price)/risk).toFixed(2)));
-    if(rr>=minRR&&tp>price) return tp;
+function calculateEMA(values, period) {
+  if (!Array.isArray(values) || values.length < period) return null;
+  const k = 2 / (period + 1);
+  let ema = values[0];
+  for (let i = 1; i < values.length; i++) {
+    if (values[i] != null) ema = values[i] * k + ema * (1 - k);
   }
+  return safeNum(ema);
+}
 
-  // Fallback: ATR × 2.0
-  return roundToFraksi(price+atr*2.0,fraksi);
+function calculateWINLine(highs, lows, closes, period = 21) {
+  if (!Array.isArray(closes) || closes.length < period) return null;
+  const hlc3 = closes.map((c, i) => ((highs[i] || c) + (lows[i] || c) + c) / 3);
+  return calculateEMA(hlc3, period);
 }
 
 // ════════════════════════════════════════════════════════════════
-//  calculateTPSL — v8: rebuilt berbasis swing structure
-//
-//  SL: swing low adaptif (lookback tergantung FASE)
-//  TP: swing high terdekat yang R:R >= 1.5, expand jika perlu
+//  ENTRY + SL + TP berbasis WIN Line (menggantikan ATR-based)
 // ════════════════════════════════════════════════════════════════
+function calculateWINEntry(highs, lows, closes, price) {
+  const winLine = calculateWINLine(highs, lows, closes) || price;
+  const fraksiWin = getFraksi(winLine);
+
+  // Entry levels
+  const e1 = roundToFraksi(winLine + fraksiWin,     fraksiWin); // WIN + 1 tik
+  const e2 = roundToFraksi(winLine,                 fraksiWin); // tepat WIN line
+  let   e3 = roundToFraksi(winLine - fraksiWin * 2, fraksiWin); // 2 tik bawah WIN
+
+  // SL = low hari ini - 1 tik
+  const lowToday = lows.at(-1) || price;
+  const fraksiSl = getFraksi(lowToday);
+  const sl       = roundToFraksi(lowToday - fraksiSl, fraksiSl);
+
+  // Validasi E3 > SL
+  if (e3 <= sl) e3 = roundToFraksi(sl + fraksiWin * 2, fraksiWin);
+
+  // TP = swing high 20 bar (R1) dan 50 bar (R2)
+  const r1_raw = highs.length >= 20 ? Math.max(...highs.slice(-20)) : price * 1.05;
+  const r2_raw = highs.length >= 50 ? Math.max(...highs.slice(-50)) : price * 1.10;
+  const tp  = roundToFraksi(r1_raw, getFraksi(r1_raw)); // R1
+  const tp2 = roundToFraksi(r2_raw, getFraksi(r2_raw)); // R2
+
+  return { winLine: Math.round(winLine), e1, e2, e3, sl, tp, tp2 };
+}
+
+// Pertahankan fungsi lama untuk backward compatibility
 function calculateTPSL(price,atr,fase,aksi,highs,lows){
   if(!isFinite(price)||!isFinite(atr)) return{tp:null,sl:null};
+  const resist=Math.max(...highs.slice(-10));
+  const support=Math.min(...lows.slice(-10));
   const fraksi=getFraksi(price);
-
-  // SELL: tetap pakai ATR (tidak ada swing high/low yang relevan untuk short)
+  let tp,sl;
   if(aksi==='SELL'){
-    const tp=roundToFraksi(price-atr*1.5,fraksi);
-    const sl=roundToFraksi(price+atr*1.0,fraksi);
-    return{tp,sl};
+    tp=roundToFraksi(price-atr*1.5,fraksi);
+    sl=roundToFraksi(price+atr*1.0,fraksi);
+  }else{
+    const mult=fase==='BREAKOUT'?2.5:2.0;
+    tp=roundToFraksi(Math.min(price+atr*mult,resist*1.02),fraksi);
+    sl=roundToFraksi(Math.max(price-atr*1.0,support*0.99),fraksi);
+    if(tp<=price) tp=roundToFraksi(price+atr*1.5,fraksi);
+    if(sl>=price) sl=roundToFraksi(price-atr*0.8,fraksi);
   }
-
-  // ── SL: swing low adaptif ──────────────────────────────────────────────
-  const slLookback=fase==='BREAKOUT'?10:20;
-  const swingLow=findSwingLow(lows,slLookback);
-  let sl=roundToFraksi(swingLow*0.99,fraksi);
-
-  // Safety: SL tidak boleh >= price
-  if(sl>=price) sl=roundToFraksi(price-atr*0.8,fraksi);
-
-  // ── TP: swing high terdekat dengan R:R >= 1.5 ──────────────────────────
-  let tp=findSwingHighForTP(price,sl,highs,atr,1.5);
-
-  // Safety: TP tidak boleh <= price
-  if(!tp||tp<=price) tp=roundToFraksi(price+atr*1.5,fraksi);
-
   return{tp,sl};
 }
 
@@ -597,13 +536,12 @@ module.exports={
   inferPineStatus,
   formatScreenerOutput,
   calculateTPSL,   calculateEntry,
+  calculateEMA,    calculateWINLine, calculateWINEntry,
   getFraksi,       roundToFraksi,
   calculateSMA,
   calculateLiquidity, getLiquidityStatus,
   confirmCross,
   calculateRegime,
   calculateRR,
-  applyFilters,
-  findSwingLow,
-  findSwingHighForTP
+  applyFilters
 };

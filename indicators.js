@@ -358,7 +358,9 @@ function roundToFraksi(price,fraksi){
 }
 
 // ════════════════════════════════════════════════════════════════
-//  WIN LINE — EMA dari HLC3 (konsisten dengan Pine Script v9.0)
+//  WIN LINE — SMA dari HLC3 length 10 (konsisten dengan v8.5)
+//  CHANGELOG: EMA(hlc3,21) diganti SMA(hlc3,10) sesuai hasil
+//  reverse-engineering WIN Line Wisdom & Invest
 // ════════════════════════════════════════════════════════════════
 function calculateEMA(values, period) {
   if (!Array.isArray(values) || values.length < period) return null;
@@ -370,10 +372,12 @@ function calculateEMA(values, period) {
   return safeNum(ema);
 }
 
-function calculateWINLine(highs, lows, closes, period = 21) {
+function calculateWINLine(highs, lows, closes, period = 10) {
   if (!Array.isArray(closes) || closes.length < period) return null;
   const hlc3 = closes.map((c, i) => ((highs[i] || c) + (lows[i] || c) + c) / 3);
-  return calculateEMA(hlc3, period);
+  // SMA: rata-rata sederhana N bar terakhir
+  const recent = hlc3.slice(-period);
+  return safeNum(avg(recent));
 }
 
 // ════════════════════════════════════════════════════════════════

@@ -50,10 +50,20 @@ async function fetchDataRaw(symbol, range=FETCH_RANGE){
       if(!chart) continue;
       const meta    = chart.meta;
       const quote   = chart.indicators.quote[0];
-      const closes  = quote.close.filter(v => v != null);
-      const highs   = quote.high.filter(v => v != null);
-      const lows    = quote.low.filter(v => v != null);
-      const volumes = quote.volume.filter(v => v != null);
+
+      // Filter bersama untuk hindari misalignment antar array
+      const rawBars = quote.close.map((c, i) => ({
+        c: quote.close[i],
+        h: quote.high[i],
+        l: quote.low[i],
+        v: quote.volume[i]
+      })).filter(d => d.c != null && d.h != null && d.l != null);
+
+      const closes  = rawBars.map(d => d.c);
+      const highs   = rawBars.map(d => d.h);
+      const lows    = rawBars.map(d => d.l);
+      const volumes = rawBars.map(d => d.v || 0);
+
       if(closes.length < 30) continue;
       const price     = meta.regularMarketPrice || closes[closes.length-1];
       const prevClose = meta.previousClose      || closes[closes.length-2];
@@ -167,7 +177,7 @@ async function screenStock(ticker, regimeInfo){
     tp, tp2, sl,
     e1, e2, e3,
     rrE1, rrE2, rrE3,
-    priceAboveWIN: winCalc.priceAboveWIN,
+    priceAboveWIN: winCalc.priceAboveWIN && winCalc.validEntry,
 
     liquidity:    liquidityStatus.label,
     avgValueIDR:  Math.round(liquidity.avgValue),

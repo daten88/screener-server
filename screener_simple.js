@@ -36,15 +36,9 @@ const axios = require('axios');
 const TI    = require('technicalindicators');
 
 // ── Config ────────────────────────────────────────────────────────────────────
-const WATCHLIST = ['AHAP','ARCI','ASHA','ASLI','ASPR','ATAP','AYAM','BAIK','BBYB','BDMN',
-'BGTG','BIPI','BNBR','BRMS','BRPT','BULL','BUMI','BUVA','BWPT','CARE',
-'COCO','CPRO','CTTH','CUAN','DATA','DEFI','DEWA','DKFT','DKHH','DOOH',
-'DPUM','ELSA','ELTY','EMAS','EMTK','ENRG','ENZO','ESIP','FORE','GTSI',
-'HUMI','IBOS','ICON','IMPC','INCF','INCO','INDY','INKP','JGLE','KBLV',
-'KETR','KING','KLAS','KPIG','KRYA','MAIN','MBSS','MDIA','MDKA','MEDS',
-'MINA','NAYZ','NINE','OASA','PACK','PADA','PADI','PSKT','PYFA','RAJA',
-'RLCO','RMKE','SINI','SOCI','SOFA','SSIA','TAPG','TKIM','TOBA','TPIA',
-'TRIN','TRUE','UNVR','VKTR','WIFI','WMUU','YELO','ZATA'
+const WATCHLIST = ['ADMR','AHAP','AMMN','ARCI','BGTG','BIPI','BMRI','BNBR','BRMS','BRPT','BULL','BUMI','BUVA','CTTH',
+                   'CUAN','DATA','DEWA','DPUM','DSSA','ESIP','GTSI','HUMI','ICON','IMPC','INDY','IRSX','JPFA','KETR','KPIG','MBMA','MBSS',
+                   'MEDS','MINA','NAYZ','NINE','PACK','PADA','PADI','PANI','PKPK','PSKT','RAJA','RLCO','SINI','SOFA','TAPG','TINS','TPIA','VKTR','WIFI'
 ];
 
 const CFG = {

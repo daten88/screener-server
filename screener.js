@@ -167,6 +167,7 @@ async function screenStock(ticker, regimeInfo){
     tp, tp2, sl,
     e1, e2, e3,
     rrE1, rrE2, rrE3,
+    priceAboveWIN: winCalc.priceAboveWIN,
 
     liquidity:    liquidityStatus.label,
     avgValueIDR:  Math.round(liquidity.avgValue),

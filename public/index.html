@@ -289,7 +289,7 @@ tr.dr{cursor:pointer}tr.dr:hover td{background:#1a1a1a}tr.sel td{background:#0a1
       <th onclick="sortBy('macd')">MACD</th><th onclick="sortBy('zone')">CROSS/ZONE</th>
       <th onclick="sortBy('rvol')">RVOL</th><th onclick="sortBy('bdr')">BDR</th>
       <th onclick="sortBy('pwr')">PWR</th><th onclick="sortBy('fase')">FASE</th>
-      <th onclick="sortBy('entry')">ENTRY</th><th onclick="sortBy('tp')">TP</th>
+      <th onclick="sortBy('entry')">ENTRY (WIN Line)</th><th onclick="sortBy('tp')">TP</th>
       <th onclick="sortBy('sl')">SL</th><th onclick="sortBy('rr')">R:R</th>
       <th onclick="sortBy('entryType')">TYPE</th><th></th>
     </tr></thead>
@@ -314,7 +314,7 @@ tr.dr{cursor:pointer}tr.dr:hover td{background:#1a1a1a}tr.sel td{background:#0a1
     </div>
     <div class="tv-wrap" id="tvWrap"></div>
   </div>
-  <div class="note"><strong>v8:</strong> ANTRI = pasang limit order (gate diperketat: PWR≥3, R:R≥1.5, BEAR diblokir) · SL/TP berbasis swing structure · MISS = cek Telegram · WAIT = pantau · EXIT = hindari. <strong>Bukan rekomendasi investasi.</strong></div>
+  <div class="note"><strong>v8 WIN Line:</strong> ANTRI = harga ≥ WIN line + entry E1/E2/E3 berbasis WIN line · SL = low hari ini - 1 tik · TP = swing high 20 bar · MISS = cek Telegram · WAIT = pantau · EXIT = hindari. <strong>Bukan rekomendasi investasi.</strong></div>
 </div>
 </div>
 
@@ -360,12 +360,17 @@ var cache={},regime={},sel=null,fType='entryType',fVal='ALL',sKey='entryType',sA
 var ET={ANTRI:0,MISS:1,WAIT:2,EXIT:3};
 var FO={BREAKOUT:0,REBOUND:1,SIDEWAYS:2,BREAKDOWN:3};
 
+// ── FIX 1: getEntryType — block ANTRI jika harga di bawah WIN line ──
 function getEntryType(d){
   if(!d||!d.ok)return'WAIT';
-  if(d.category==='MISSED_HAKA')return'MISS';
+  if(d.category==='MISSED_HAKA'){
+    if(!d.priceAboveWIN)return'WAIT';
+    return'MISS';
+  }
   if(d.category==='WATCH')return'WAIT';
   if(d.category==='SELL'||d.category==='SKIP')return'EXIT';
   if(d.category==='LIMIT_SETUP'){
+    if(!d.priceAboveWIN)return'WAIT';
     var e2=d.levels&&d.levels.e2?d.levels.e2.rr:null;
     var e3=d.levels&&d.levels.e3?d.levels.e3.rr:null;
     if((e2!=null&&e2>=1.5)||(e3!=null&&e3>=2.0))return'ANTRI';
@@ -386,16 +391,20 @@ function getEntryRR(d){
   return null;
 }
 
+// ── FIX 2: entryText — tampilkan E1, E2, E3 semua ──
 function entryText(d){
   var t=getEntryType(d);
   if(t==='ANTRI'){
     var parts=[];
+    var e1=d.levels&&d.levels.e1;
     var e2=d.levels&&d.levels.e2;
     var e3=d.levels&&d.levels.e3;
+    if(e1&&e1.price&&e1.rr>0)
+      parts.push('E1:'+e1.price.toLocaleString('id-ID')+'(RR '+e1.rr.toFixed(2)+')');
     if(e2&&e2.price&&e2.rr>0)
-      parts.push(e2.price.toLocaleString('id-ID')+' (RR '+e2.rr.toFixed(2)+')');
+      parts.push('E2:'+e2.price.toLocaleString('id-ID')+'(RR '+e2.rr.toFixed(2)+')');
     if(e3&&e3.price&&e3.rr>0)
-      parts.push(e3.price.toLocaleString('id-ID')+' (RR '+e3.rr.toFixed(2)+')');
+      parts.push('E3:'+e3.price.toLocaleString('id-ID')+'(RR '+e3.rr.toFixed(2)+')');
     return parts.length?parts.join(' / '):'—';
   }
   if(t==='MISS'){
@@ -459,9 +468,10 @@ function renderTable(){
     if(fType==='cross'){if(fVal==='GOLDEN'&&!d.goldenCross)return null;if(fVal==='DEATH'&&!d.deathCross)return null;if(fVal==='BULL_ZONE'&&d.zone!=='BULL_ZONE'&&d.zone!=='ZERO_CROSS_UP')return null;if(fVal==='BEAR_ZONE'&&d.zone!=='BEAR_ZONE'&&d.zone!=='ZERO_CROSS_DOWN')return null;}
     var cc=d.chg>=0?'gp':'gn',mc=d.macd>=0?'#00ff88':'#ff4444',rc=d.rvol>=2.0?'#ff4444':d.rvol>=1.5?'#00ff88':d.rvol>=1.0?'#ffdd00':d.rvol>=0.6?'#aaaaaa':'#444444';
     var selCls=sel===t?' sel':'',er=getEntryRR(d),rrTip=er&&er>0?' title="Entry R:R 1:'+er.toFixed(2)+'"':'';
+    var winInfo=d.winLine?'<span style="font-size:9px;color:#555;margin-left:3px">WIN:'+d.winLine+'</span>':'';
     var row='<tr class="dr'+selCls+'" onclick="rowClick(\''+t+'\')">'+
       '<td class="em">'+t+trendArrow(d)+liqBadgeC(d.liquidity)+'</td>'+
-      '<td style="color:#ffaa00;font-weight:500">'+d.price.toLocaleString('id-ID')+'</td>'+
+      '<td style="color:#ffaa00;font-weight:500">'+d.price.toLocaleString('id-ID')+winInfo+'</td>'+
       '<td class="'+cc+'">'+(d.chg>=0?'+':'')+d.chg.toFixed(1)+'%</td>'+
       '<td>'+rsiBar(d.rsi)+'</td>'+
       '<td style="color:'+mc+';font-weight:500;font-size:11px">'+(d.macd>0?'+':'')+d.macd+'</td>'+
@@ -500,7 +510,8 @@ function showChart(t){
   document.getElementById('cBdr').innerHTML=d&&d.ok?bBadge(d.bdr,d.zone):'';
   document.getElementById('cCross').innerHTML=d&&d.ok?crossBadge(d.goldenCross,d.deathCross,d.zone,d.crossValid):'';
   if(d&&d.ok){
-    document.getElementById('cEntry').innerHTML='<span style="color:#ccc">'+entryText(d)+'</span>';
+    var winTxt=d.winLine?'WIN Line: '+d.winLine+' · ':'';
+    document.getElementById('cEntry').innerHTML='<span style="color:#888;font-size:10px">'+winTxt+'</span><span style="color:#ccc">'+entryText(d)+'</span>';
     var er=getEntryRR(d),rrTxt=(er&&er>0)?' <span class="'+(er>=2?'rr-good':'rr-bad')+'" style="font-weight:600">(Entry R:R 1:'+er.toFixed(2)+')</span>':'';
     document.getElementById('cTpSl').innerHTML='<span class="tp-vc">TP '+(d.tp?d.tp.toLocaleString('id-ID'):'—')+'</span> &nbsp; <span class="sl-vc">SL '+(d.sl?d.sl.toLocaleString('id-ID'):'—')+'</span>'+rrTxt;
     var pineInfo=d.pineSent===false&&d.pineReason?'🔕 Pine: '+d.pineReason+' · ':'';

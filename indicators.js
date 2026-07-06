@@ -402,7 +402,7 @@ function calculateWINEntry(highs, lows, closes, price) {
   const tp  = roundToFraksi(r1_raw, getFraksi(r1_raw)); // R1
   const tp2 = roundToFraksi(r2_raw, getFraksi(r2_raw)); // R2
 
-  return { winLine: Math.round(winLine), e1, e2, e3, sl, tp, tp2 };
+  return { winLine: Math.round(winLine), e1, e2, e3, sl, tp, tp2, priceAboveWIN: price >= winLine };
 }
 
 // Pertahankan fungsi lama untuk backward compatibility

@@ -224,7 +224,7 @@ async function runScreener(){
     missedHaka.forEach(r => {
       console.log(
         `  ${r.ticker.padEnd(6)} | ${r.confidence.padEnd(8)} | ${r.fase.padEnd(9)} | ` +
-        `PWR:${r.pwr} | WIN:${r.winLine} | E1:${r.e1}(${r.rrE1}) E2:${r.e2}(${r.rrE2}) | SL:${r.sl} | TP:${r.tp}`
+        `PWR:${r.pwr} | WIN:${r.winLine} | E1:${r.e1}(${r.rrE1}) E2:${r.e2}(${r.rrE2}) E3:${r.e3}(${r.rrE3}) | SL:${r.sl} | TP:${r.tp}`
       );
       console.log(`         💡 ${r.actionText}`);
       if(r.warnings.length) r.warnings.forEach(w => console.log(`         ⚠  ${w}`));
@@ -243,7 +243,7 @@ async function runScreener(){
     limitSetup.forEach(r => {
       console.log(
         `  ${r.ticker.padEnd(6)} | ${r.confidence.padEnd(8)} | ${r.fase.padEnd(9)} | ` +
-        `PWR:${r.pwr} | WIN:${r.winLine} | E2:${r.e2}(${r.rrE2}) E3:${r.e3}(${r.rrE3}) | SL:${r.sl} | TP:${r.tp}`
+        `PWR:${r.pwr} | WIN:${r.winLine} | E1:${r.e1}(${r.rrE1}) E2:${r.e2}(${r.rrE2}) E3:${r.e3}(${r.rrE3}) | SL:${r.sl} | TP:${r.tp}`
       );
       console.log(`         💡 ${r.actionText}`);
       if(r.pineReason) console.log(`         🔕 Pine: ${r.pineReason}`);
@@ -283,7 +283,7 @@ async function runScreener(){
     watchList.slice(0,10).forEach(r => {
       console.log(
         `  ${r.ticker.padEnd(6)} | ${r.confidence.padEnd(8)} | ${r.fase.padEnd(9)} | ` +
-        `PWR:${r.pwr} | WIN:${r.winLine} | E1:${r.e1}(${r.rrE1}) | SL:${r.sl} | TP:${r.tp}`
+        `PWR:${r.pwr} | WIN:${r.winLine} | E1:${r.e1}(${r.rrE1}) E2:${r.e2}(${r.rrE2}) E3:${r.e3}(${r.rrE3}) | SL:${r.sl} | TP:${r.tp}`
       );
     });
   }

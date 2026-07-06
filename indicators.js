@@ -210,7 +210,8 @@ function formatScreenerOutput(ctx){
   }=ctx;
 
   const pine=inferPineStatus(aksi,price,tp,sl,rsi);
-  const rrE1=pine.rrE1;
+  // rrE1 dihitung dari harga entry e1, bukan harga pasar
+  const rrE1 = e1 ? calculateRR(e1, tp, sl, 'BUY') : pine.rrE1;
   const rrE2=e2?calculateRR(e2,tp,sl,'BUY'):null;
   const rrE3=e3?calculateRR(e3,tp,sl,'BUY'):null;
 
@@ -406,7 +407,9 @@ function calculateWINEntry(highs, lows, closes, price) {
   const tp  = roundToFraksi(r1_raw, getFraksi(r1_raw)); // R1
   const tp2 = roundToFraksi(r2_raw, getFraksi(r2_raw)); // R2
 
-  return { winLine: Math.round(winLine), e1, e2, e3, sl, tp, tp2, priceAboveWIN: price >= winLine };
+  const priceAboveWIN = price >= winLine;
+  const validEntry    = e1 > sl; // E1 harus di atas SL agar entry valid
+  return { winLine: Math.round(winLine), e1, e2, e3, sl, tp, tp2, priceAboveWIN, validEntry };
 }
 
 // Pertahankan fungsi lama untuk backward compatibility

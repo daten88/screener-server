@@ -289,11 +289,11 @@ tr.dr{cursor:pointer}tr.dr:hover td{background:#1a1a1a}tr.sel td{background:#0a1
       <th onclick="sortBy('macd')">MACD</th><th onclick="sortBy('zone')">CROSS/ZONE</th>
       <th onclick="sortBy('rvol')">RVOL</th><th onclick="sortBy('bdr')">BDR</th>
       <th onclick="sortBy('pwr')">PWR</th><th onclick="sortBy('fase')">FASE</th>
-      <th onclick="sortBy('entry')">ENTRY (WIN Line)</th><th onclick="sortBy('tp')">TP</th>
+      <th onclick="sortBy('entry')">ENTRY (WIN Line)</th><th onclick="sortBy('r1')">R1</th><th onclick="sortBy('r2')">R2</th>
       <th onclick="sortBy('sl')">SL</th><th onclick="sortBy('rr')">R:R</th>
       <th onclick="sortBy('entryType')">TYPE</th><th></th>
     </tr></thead>
-    <tbody id="tBody"><tr><td colspan="16" style="text-align:center;padding:30px;color:#555"><span class="spin"></span> Memuat data...</td></tr></tbody>
+    <tbody id="tBody"><tr><td colspan="17" style="text-align:center;padding:30px;color:#555"><span class="spin"></span> Memuat data...</td></tr></tbody>
   </table></div>
   <div id="chartPanel" style="display:none" class="chart-panel">
     <div class="chart-hdr">
@@ -480,8 +480,11 @@ function renderTable(){
       '<td>'+bBadge(d.bdr,d.zone)+'</td>'+
       '<td>'+pwrDots(d.pwr,d.fase)+'</td>'+
       '<td>'+fBadge(d.fase)+'</td>'+
-      '<td style="font-size:11px;color:#ccc">'+entryText(d)+'</td>'+
-      '<td><span class="tp-vc"'+rrTip+'>'+(d.tp?d.tp.toLocaleString('id-ID'):'—')+'</span></td>'+
+      '<td style="font-size:11px;color:#ccc">'+
+        (d.isNear!==undefined?'<span style="font-size:9px;color:#555;margin-right:4px">'+(d.isNear?'NEAR':'FAR')+'</span>':'')+
+        entryText(d)+'</td>'+
+      '<td><span class="tp-vc"'+rrTip+'>'+(d.r1?d.r1.toLocaleString('id-ID'):'—')+'</span></td>'+
+      '<td><span style="font-size:11px;color:#ffaa00">'+(d.r2?d.r2.toLocaleString('id-ID'):'—')+'</span></td>'+
       '<td><span class="sl-vc"'+rrTip+'>'+(d.sl?d.sl.toLocaleString('id-ID'):'—')+'</span></td>'+
       '<td>'+rrBadge(d)+'</td>'+
       '<td>'+typeBadge(et)+'</td>'+
@@ -513,7 +516,7 @@ function showChart(t){
     var winTxt=d.winLine?'WIN Line: '+d.winLine+' · ':'';
     document.getElementById('cEntry').innerHTML='<span style="color:#888;font-size:10px">'+winTxt+'</span><span style="color:#ccc">'+entryText(d)+'</span>';
     var er=getEntryRR(d),rrTxt=(er&&er>0)?' <span class="'+(er>=2?'rr-good':'rr-bad')+'" style="font-weight:600">(Entry R:R 1:'+er.toFixed(2)+')</span>':'';
-    document.getElementById('cTpSl').innerHTML='<span class="tp-vc">TP '+(d.tp?d.tp.toLocaleString('id-ID'):'—')+'</span> &nbsp; <span class="sl-vc">SL '+(d.sl?d.sl.toLocaleString('id-ID'):'—')+'</span>'+rrTxt;
+    document.getElementById('cTpSl').innerHTML='<span class="tp-vc">R1 '+(d.r1?d.r1.toLocaleString('id-ID'):'—')+'</span> &nbsp; <span style="font-size:11px;color:#ffaa00">R2 '+(d.r2?d.r2.toLocaleString('id-ID'):'—')+'</span> &nbsp; <span class="sl-vc">SL '+(d.sl?d.sl.toLocaleString('id-ID'):'—')+'</span>'+rrTxt;
     var pineInfo=d.pineSent===false&&d.pineReason?'🔕 Pine: '+d.pineReason+' · ':'';
     document.getElementById('cWarn').innerHTML=(pineInfo)+(d.warnings&&d.warnings.length?'⚠ '+d.warnings.join(' · '):'');
     document.getElementById('cActionText').innerHTML=d.actionText?'💡 '+d.actionText:'';

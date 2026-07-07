@@ -108,14 +108,14 @@ async function screenStock(ticker, regimeInfo){
 
   // ── WIN Line-based Entry + SL + TP ────────────────────────────────────
   const winCalc = calculateWINEntry(highs, lows, closes, price);
-  const { winLine, e1, e2, e3, sl, tp, tp2 } = winCalc;
+  const { winLine, e1, e2, e3, sl, r1, r2 } = winCalc;
 
   const liquidity       = calculateLiquidity(closes, volumes);
   const liquidityStatus = getLiquidityStatus(liquidity, MIN_LIQUIDITY_IDR);
 
   const filtered = applyFilters({
     aksi: aksiRaw,
-    price, tp, sl, closes,
+    price, tp: r1, sl, closes,
     pwr, bdr: bdr.label,
     hist, histPrev, goldenCross, deathCross,
     liquidityStatus,
@@ -124,7 +124,7 @@ async function screenStock(ticker, regimeInfo){
   });
 
   const screenerOut = formatScreenerOutput({
-    ticker, price, tp, sl, e1, e2, e3,
+    ticker, price, tp: r1, sl, e1, e2, e3,
     pwr, bdr: bdr.label, fase, chg, rvol, rsi,
     liquidityStatus,
     regime: regimeInfo.regime,
@@ -138,10 +138,9 @@ async function screenStock(ticker, regimeInfo){
   const rvolSig      = getRVOLSignal(rvol);
   const zoneLabel    = getZoneLabel(zone);
 
-  // R:R kalkulasi dari WIN line perspective
-  const rrE1 = calculateRR(e1, tp, sl, 'BUY');
-  const rrE2 = calculateRR(e2, tp, sl, 'BUY');
-  const rrE3 = calculateRR(e3, tp, sl, 'BUY');
+  const rrE1 = calculateRR(e1, r1, sl, 'BUY');
+  const rrE2 = calculateRR(e2, r1, sl, 'BUY');
+  const rrE3 = calculateRR(e3, r1, sl, 'BUY');
 
   return {
     ticker,
@@ -172,12 +171,13 @@ async function screenStock(ticker, regimeInfo){
     rr:            rrE1,
     severityScore: filtered.severityScore,
 
-    // ── WIN Line entry levels ──────────────────────────────────────────
+    // WIN Line entry levels
     winLine,
-    tp, tp2, sl,
+    r1, r2, sl,
     e1, e2, e3,
     rrE1, rrE2, rrE3,
     priceAboveWIN: winCalc.priceAboveWIN && winCalc.validEntry,
+    isNear: winCalc.isNear,
 
     liquidity:    liquidityStatus.label,
     avgValueIDR:  Math.round(liquidity.avgValue),
@@ -235,7 +235,7 @@ async function runScreener(){
     missedHaka.forEach(r => {
       console.log(
         `  ${r.ticker.padEnd(6)} | ${r.confidence.padEnd(8)} | ${r.fase.padEnd(9)} | ` +
-        `PWR:${r.pwr} | WIN:${r.winLine} | E1:${r.e1}(${r.rrE1}) E2:${r.e2}(${r.rrE2}) E3:${r.e3}(${r.rrE3}) | SL:${r.sl} | TP:${r.tp}`
+        `PWR:${r.pwr} | WIN:${r.winLine} | E1:${r.e1}(${r.rrE1}) E2:${r.e2}(${r.rrE2}) E3:${r.e3}(${r.rrE3}) | SL:${r.sl} | R1:${r.r1} | R2:${r.r2}`
       );
       console.log(`         💡 ${r.actionText}`);
       if(r.warnings.length) r.warnings.forEach(w => console.log(`         ⚠  ${w}`));
@@ -254,7 +254,7 @@ async function runScreener(){
     limitSetup.forEach(r => {
       console.log(
         `  ${r.ticker.padEnd(6)} | ${r.confidence.padEnd(8)} | ${r.fase.padEnd(9)} | ` +
-        `PWR:${r.pwr} | WIN:${r.winLine} | E1:${r.e1}(${r.rrE1}) E2:${r.e2}(${r.rrE2}) E3:${r.e3}(${r.rrE3}) | SL:${r.sl} | TP:${r.tp}`
+        `PWR:${r.pwr} | WIN:${r.winLine} | E1:${r.e1}(${r.rrE1}) E2:${r.e2}(${r.rrE2}) E3:${r.e3}(${r.rrE3}) | SL:${r.sl} | R1:${r.r1} | R2:${r.r2}`
       );
       console.log(`         💡 ${r.actionText}`);
       if(r.pineReason) console.log(`         🔕 Pine: ${r.pineReason}`);
@@ -294,7 +294,7 @@ async function runScreener(){
     watchList.slice(0,10).forEach(r => {
       console.log(
         `  ${r.ticker.padEnd(6)} | ${r.confidence.padEnd(8)} | ${r.fase.padEnd(9)} | ` +
-        `PWR:${r.pwr} | WIN:${r.winLine} | E1:${r.e1}(${r.rrE1}) E2:${r.e2}(${r.rrE2}) E3:${r.e3}(${r.rrE3}) | SL:${r.sl} | TP:${r.tp}`
+        `PWR:${r.pwr} | WIN:${r.winLine} | E1:${r.e1}(${r.rrE1}) E2:${r.e2}(${r.rrE2}) E3:${r.e3}(${r.rrE3}) | SL:${r.sl} | R1:${r.r1} | R2:${r.r2}`
       );
     });
   }

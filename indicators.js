@@ -382,34 +382,67 @@ function calculateWINLine(highs, lows, closes, period = 10) {
 }
 
 // ════════════════════════════════════════════════════════════════
-//  ENTRY + SL + TP berbasis WIN Line (menggantikan ATR-based)
+//  ENTRY + SL + R1/R2 — Piramid 3 Level (Near vs Far)
+//
+//  Case 1 NEAR: price <= WIN line + ATR
+//    E1/E2/E3 tersebar proporsional antara WIN line dan low hari ini
+//
+//  Case 2 FAR: price > WIN line + ATR
+//    E1/E2/E3 tersebar proporsional antara close dan WIN line
+//    (antisipasi pullback sebelum entry)
+//
+//  SL = low hari ini - 1 tik (kedua case)
 // ════════════════════════════════════════════════════════════════
 function calculateWINEntry(highs, lows, closes, price) {
-  const winLine = calculateWINLine(highs, lows, closes) || price;
+  const winLine   = calculateWINLine(highs, lows, closes) || price;
   const fraksiWin = getFraksi(winLine);
-
-  // Entry levels
-  const e1 = roundToFraksi(winLine + fraksiWin,     fraksiWin); // WIN + 1 tik
-  const e2 = roundToFraksi(winLine,                 fraksiWin); // tepat WIN line
-  let   e3 = roundToFraksi(winLine - fraksiWin * 2, fraksiWin); // 2 tik bawah WIN
+  const atr       = calculateATR(highs, lows, closes, 14);
 
   // SL = low hari ini - 1 tik
   const lowToday = lows.at(-1) || price;
   const fraksiSl = getFraksi(lowToday);
   const sl       = roundToFraksi(lowToday - fraksiSl, fraksiSl);
 
-  // Validasi E3 > SL
-  if (e3 <= sl) e3 = roundToFraksi(sl + fraksiWin * 2, fraksiWin);
+  const isNear = price <= winLine + atr;
+  let e1, e2, e3;
 
-  // TP = swing high 20 bar (R1) dan 50 bar (R2)
+  if (isNear) {
+    // Case 1: harga dekat WIN line
+    // E1/E2/E3 proporsional antara WIN line dan low hari ini
+    const span = winLine - lowToday;
+    if (span > fraksiWin * 4) {
+      e1 = roundToFraksi(winLine + fraksiWin,       fraksiWin);
+      e2 = roundToFraksi(winLine - span / 3,         fraksiWin);
+      e3 = roundToFraksi(winLine - (2 * span) / 3,  fraksiWin);
+    } else {
+      e1 = roundToFraksi(winLine + fraksiWin,        fraksiWin);
+      e2 = roundToFraksi(winLine,                    fraksiWin);
+      e3 = roundToFraksi(winLine - fraksiWin * 2,   fraksiWin);
+    }
+  } else {
+    // Case 2: harga jauh di atas WIN line
+    // E1/E2/E3 proporsional antara close dan WIN line
+    const gap = price - winLine;
+    e1 = roundToFraksi(price  - gap / 3,        fraksiWin);
+    e2 = roundToFraksi(price  - (2 * gap) / 3,  fraksiWin);
+    e3 = roundToFraksi(winLine + fraksiWin,      fraksiWin);
+  }
+
+  // Validasi urutan E1 > E2 > E3 > SL
+  if (e3 <= sl)  e3 = roundToFraksi(sl  + fraksiWin * 2, fraksiWin);
+  if (e2 <= e3)  e2 = roundToFraksi(e3  + fraksiWin * 2, fraksiWin);
+  if (e1 <= e2)  e1 = roundToFraksi(e2  + fraksiWin,     fraksiWin);
+
+  // R1/R2: swing high sebagai referensi resistance
   const r1_raw = highs.length >= 20 ? Math.max(...highs.slice(-20)) : price * 1.05;
   const r2_raw = highs.length >= 50 ? Math.max(...highs.slice(-50)) : price * 1.10;
-  const tp  = roundToFraksi(r1_raw, getFraksi(r1_raw)); // R1
-  const tp2 = roundToFraksi(r2_raw, getFraksi(r2_raw)); // R2
+  const r1     = roundToFraksi(r1_raw, getFraksi(r1_raw));
+  const r2     = roundToFraksi(r2_raw, getFraksi(r2_raw));
 
   const priceAboveWIN = price >= winLine;
-  const validEntry    = e1 > sl; // E1 harus di atas SL agar entry valid
-  return { winLine: Math.round(winLine), e1, e2, e3, sl, tp, tp2, priceAboveWIN, validEntry };
+  const validEntry    = e1 > sl;
+
+  return { winLine: Math.round(winLine), e1, e2, e3, sl, r1, r2, priceAboveWIN, validEntry, isNear };
 }
 
 // Pertahankan fungsi lama untuk backward compatibility
